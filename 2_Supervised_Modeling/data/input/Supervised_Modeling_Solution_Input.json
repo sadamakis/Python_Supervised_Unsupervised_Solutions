@@ -6,6 +6,7 @@
     "target_variable_name": "target", 
     "weight_variable_name": "weight_variable", 
     "sample_variable_name": "sample variable", 
+    "amount_variable_name": "amount", 
     "sample_values": ["training", "validation"], 
     "select_missing_variables_to_drop_threshold": 0.5, 
     "character_classification_threshold": 10, 

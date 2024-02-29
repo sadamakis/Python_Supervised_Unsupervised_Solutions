@@ -3,7 +3,8 @@
 """
 
 import numpy as np
-import pandas as pd       
+import pandas as pd
+import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set(font_scale=1.5)
@@ -16,6 +17,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import auc
 from sklearn.metrics import confusion_matrix
 import statistics 
+from decorators import time_function
 
 
 
@@ -391,6 +393,7 @@ def _capture_value_weight(resp, weight, n_bands=10, top=10):
     return pd.DataFrame(np.c_[w_resp_frac, resp_sum, resp_cum, resp_adr, resp_frac], \
         columns = ['Quantile Value', 'Value', 'Cumulative Value', 'VDR', 'Cumulative VDR']).head(top)
 
+@time_function
 def lift_table_weight(score_unit_value, n_bands=10, rows=10):
                 """Generate the lifting table.
                 
@@ -421,6 +424,7 @@ def lift_table_weight(score_unit_value, n_bands=10, rows=10):
 
                 return pd.concat([unit_caprate, value_caprate], axis=1)
 
+@time_function
 def plot_ADR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
     ax = plt.subplot((111))
@@ -436,6 +440,7 @@ def plot_ADR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
     
+@time_function
 def plot_cADR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
     ax = plt.subplot((111))
@@ -451,6 +456,7 @@ def plot_cADR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
 
+@time_function
 def plot_FPR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
     ax = plt.subplot((111))
@@ -465,6 +471,7 @@ def plot_FPR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
 
+@time_function
 def plot_cFPR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
     ax = plt.subplot((111))
@@ -479,6 +486,7 @@ def plot_cFPR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
 
+@time_function
 def plot_ROC_curve(
     table_name, # Table name
     target_variable, # Target variable name
@@ -508,6 +516,7 @@ def plot_ROC_curve(
     # show the plot
     pyplot.show()
     
+@time_function
 def plot_precision_recall_curve(
     table_name, # Table name that has the target variable, the predicted variable, and the weights
     target_variable, # Target variable name
@@ -530,6 +539,7 @@ def plot_precision_recall_curve(
     pyplot.show()
 
 
+@time_function
 def plot_cutoffs(
     table_name, # Table name that has the target variable, the predicted variable, and the weights
     target_variable, # Target variable name
@@ -559,7 +569,11 @@ def plot_cutoffs(
         model_sensitivity = true_positive/positive
         model_specificity = true_negative/negative
         model_precision = true_positive/(true_positive+false_positive)
-        df = df.append({'cutoff':threshold, 'f1':model_f1, 'accuracy':model_accuracy, 'sensitivity/recall':model_sensitivity, 'specificity':model_specificity, 'precision':model_precision}, ignore_index=True)
+        # Run different code depending on the Python version
+        if sys.version_info[0] < 2:
+            df = df.append({'cutoff':threshold, 'f1':model_f1, 'accuracy':model_accuracy, 'sensitivity/recall':model_sensitivity, 'specificity':model_specificity, 'precision':model_precision}, ignore_index=True)
+        else: 
+            df = pd.concat([df, pd.DataFrame({'cutoff':[threshold], 'f1':[model_f1], 'accuracy':[model_accuracy], 'sensitivity/recall':[model_sensitivity], 'specificity':[model_specificity], 'precision':[model_precision]})], ignore_index=True)
         
     # create overplot
     pyplot.plot(df['cutoff'], df['f1'], marker='.', label='F1 score')
@@ -578,7 +592,7 @@ def plot_cutoffs(
     if return_table == True:
         return(df)
 
-
+@time_function
 def calculate_gini(
     table_name, # Table name
     target_variable, # Target variable name

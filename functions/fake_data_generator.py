@@ -94,10 +94,12 @@ def fake_data_generator(
         weights = x_data.apply(lambda x: np.random.random(), axis=1). astype (np.float32)
     else:
         weights = int (weight_var)
-
     x_data['weight_variable'] = weights
     print('GMI attributes took %.2fs. to run'%(time.time() -start_time))
+    
     start_time_initial = time.time()
+
+    # sample_variable
     x_data['sample variable'] = np.array (list (map (lambda x: str(x).replace('True', 'training').replace('False', 'validation'), np.random.choice([True, False], size=sample_size, p=[0.70, 0.30]))))
     print('Train/Test split took %.2fs. to run'%(time.time() -start_time))
     
@@ -107,6 +109,10 @@ def fake_data_generator(
     
     # final df 
     df = x_data.join(y_data, how='left')
+    
+    # amount_variable
+    df['amount'] = [0 if x ==0 else np.random.normal(loc=10000, scale=2000, size=None) for x in df['target']]
+
     print('This code took %.2fs. to run'%(time.time() -start_time))
     return df
         
