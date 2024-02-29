@@ -1,0 +1,8 @@
+Follow these instructions to install all the dependencies for the Supervised Modeling solution:
+
+After cloning the Sotiris_Solutions repository, run the following commands in your putty command prompt: 
+1. cd 2_Supervised_Modeling/environment_setup
+2. conda env create -f Supervised_Modeling_env.yml -n Supervised_Modeling
+3. conda activate Supervised_Modeling
+4. conda install ipykernel
+5. python -m ipykernel install --user --name Supervised_Modeling --display-name "Supervised Modeling Solution"

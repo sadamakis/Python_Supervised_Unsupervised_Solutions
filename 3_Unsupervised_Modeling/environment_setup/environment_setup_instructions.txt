@@ -1,0 +1,8 @@
+Follow these instructions to install all the dependencies for the Unsupervised Modeling solution:
+
+After cloning the Sotiris_Solutions repository, run the following commands in your putty command prompt: 
+1. cd 3_Unsupervised_Modeling/environment_setup
+2. conda env create -f Unsupervised_Modeling_env.yml -n Unsupervised_Modeling
+3. conda activate Unsupervised_Modeling
+4. conda install ipykernel
+5. python -m ipykernel install --user --name Unsupervised_Modeling --display-name "Unsupervised Modeling Solution"
