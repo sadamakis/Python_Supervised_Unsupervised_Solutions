@@ -1,0 +1,2 @@
+1. cd pytest
+2. pytest test_data_quality_report.py -p no:warnings

@@ -2,7 +2,7 @@ import pandas
 import numpy as np
 from data_processing import * 
 import time
-
+from IPython.display import display
 
 class dq_report:
     def __init__(self, 
