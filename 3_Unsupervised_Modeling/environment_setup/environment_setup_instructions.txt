@@ -1,8 +1,27 @@
 Follow these instructions to install all the dependencies for the Unsupervised Modeling solution:
 
+METHOD 1 - Using an existing yml file
 After cloning the Sotiris_Solutions repository, run the following commands in your putty command prompt: 
 1. cd 3_Unsupervised_Modeling/environment_setup
 2. conda env create -f Unsupervised_Modeling_env.yml -n Unsupervised_Modeling
 3. conda activate Unsupervised_Modeling
 4. conda install ipykernel
 5. python -m ipykernel install --user --name Unsupervised_Modeling --display-name "Unsupervised Modeling Solution"
+
+METHOD 2 - Install all libraries from scratch 
+After cloning the Sotiris_Solutions repository, run the following commands in your putty command prompt: 
+1. cd 3_Unsupervised_Modeling/environment_setup
+2. conda create --name Unsupervised_Modeling
+3. conda activate Unsupervised_Modeling
+4. conda config --env --add channels anaconda
+5. conda config --env --add channels conda-forge
+6. conda config --env --add channels pypi
+7. conda config --show channels
+
+8. conda install pandas statsmodels scikit-learn matplotlib wquantiles ipykernel
+9. python -m ipykernel install --user --name Unsupervised_Modeling --display-name "Unsupervised Modeling Solution"
+
+10. C:\Users\creep\miniconda3\envs\Unsupervised_Modeling\python.exe -m pip install --upgrade pip
+11. pip install factor_analyzer (this installed version factor_analyzer-0.5.1)
+
+12. conda env export > Unsupervised_Modeling.yml
