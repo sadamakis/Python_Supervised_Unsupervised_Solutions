@@ -84,6 +84,14 @@ def fake_data_generator(
     ))
     x_data[['cat_5', 'cat_20', 'num_2%', 'num_20%', 'num_90%', 'num_99%']] =  x_data[['cat_5', 'cat_20', 'num_2%', 'num_20%', 'num_90%', 'num_99%']].mask (mask_array)
 
+    # Numerical variable creation outlier_1%, outlier_2% (percentages indicate & rows to be replaced with outlier values)
+    x_data['outlier_1'] = np.random.rand (1,len (x_data.index))[0].astype (np.float32)+5
+    x_data['outlier_2'] = np.random.rand (1,len (x_data.index)) [0].astype (np.float32) *500
+    x_data.loc[0:19, "outlier_1"] = -1000
+    x_data.loc[20:39, "outlier_1"] = 1000
+    x_data.loc[0:19, "outlier_2"] = -100000
+    x_data.loc[20:39, "outlier_2"] = 100000
+
     #Convert variables to character
     for var in ['cat_3', 'cat_5', 'cat_20', 'cat_200']:
         x_data [var] = x_data[var].astype (str)

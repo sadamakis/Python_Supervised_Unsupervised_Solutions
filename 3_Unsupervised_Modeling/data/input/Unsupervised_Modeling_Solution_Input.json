@@ -1,6 +1,6 @@
 {
     "Load_from": "csv", 
-    "data_location": "C:/Users/creep/Anaconda/Sotiris_Solutions/3_Unsupervised_Modeling/data/input", 
+    "data_location": "D:/BackUp - 151110/Side_Projects/Analytical_Solutions/Sotiris_Solutions/3_Unsupervised_Modeling/data/input", 
     "table_name": "fake_data.csv", 
     "sample": "1.0", 
     "weight_variable_name": "weight_variable", 
@@ -21,8 +21,8 @@
     "final_model": "{'Model': KMeans, 'kwargs': {'n_clusters': 3, 'random_state': 2, 'init': 'k-means++'}}", 
     "final_model_2": "{'Model': KMeans, 'kwargs': {'n_clusters': 3, 'random_state': 2, 'init': 'k-means++'}}", 
     "feature_importance_threshold": 0.001,
-    "numeric_variables_clustering": ["random_var_0", "random_var_1", "random_var_2", "random_var_3", "random_var_4", "random_var_5", "random_var_6", "random_var_7", "random_var_8", "random_var_9", "random_var_10", "random_var_11", "random_var_12", "random_var_13", "random_var_14", "random_var_15", "random_var_16", "random_var_17", "random_var_18", "random_var_19", "num_2%", "num_20%", "num_90%", "num_99%"], 
+    "numeric_variables_clustering": ["random_var_0", "random_var_1", "random_var_2", "random_var_3", "random_var_4", "random_var_5", "random_var_6", "random_var_7", "random_var_8", "random_var_9", "random_var_10", "random_var_11", "random_var_12", "random_var_13", "random_var_14", "random_var_15", "random_var_16", "random_var_17", "random_var_18", "random_var_19", "num_2%", "num_20%", "num_90%", "num_99%", "outlier_1", "outlier_2"], 
     "character_variables_clustering": ["cat_3", "cat_5", "cat_20", "cat_200"], 
-    "numeric_variables_profiling": ["random_var_0", "random_var_1", "random_var_2", "random_var_3", "random_var_4", "random_var_5", "random_var_6", "random_var_7", "random_var_8", "random_var_9", "random_var_10", "random_var_11", "random_var_12", "random_var_13", "random_var_14", "random_var_15", "random_var_16", "random_var_17", "random_var_18", "random_var_19", "num_2%", "num_20%", "num_90%", "num_99%"], 
+    "numeric_variables_profiling": ["random_var_0", "random_var_1", "random_var_2", "random_var_3", "random_var_4", "random_var_5", "random_var_6", "random_var_7", "random_var_8", "random_var_9", "random_var_10", "random_var_11", "random_var_12", "random_var_13", "random_var_14", "random_var_15", "random_var_16", "random_var_17", "random_var_18", "random_var_19", "num_2%", "num_20%", "num_90%", "num_99%", "outlier_1", "outlier_2"], 
     "character_variables_profiling": ["cat_3", "cat_5", "cat_20", "cat_200"]
 }
