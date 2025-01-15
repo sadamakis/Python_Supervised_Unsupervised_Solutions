@@ -64,8 +64,7 @@ def calculate_correlations(
     corr_df['correlation_abs'] = np.abs(corr_df['correlation'])
     corr_df = corr_df.sort_values(by='correlation_abs', ascending=False).reset_index(drop=True)
     
-    corr_to_drop_df = corr_df.loc[corr_df['correlation_abs'] > corr_threshold]
-    corr_to_drop_df.drop(['correlation_abs'], axis=1, inplace=True)
+    corr_to_drop_df = corr_df.loc[corr_df['correlation_abs'] > corr_threshold].drop(['correlation_abs'], axis=1)
     print('The following columns have a correlation above your threshold')
     display(corr_to_drop_df)
     

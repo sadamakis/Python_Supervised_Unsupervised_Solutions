@@ -137,7 +137,7 @@ class impute_missing(object):
     ):
     
         for x in self.variables:
-            input_data[x] = input_data[x].fillna(self.impute_missing[x])
+            input_data.loc[:, x] = input_data.loc[:, x].fillna(self.impute_missing[x])
             
             
 def data_split(
