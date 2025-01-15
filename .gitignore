@@ -1,0 +1,14 @@
+# ignore ALL .pyc files
+*.pyc
+
+# Ignore files in Python checkpoint folders
+1_Fake_Data_Generation/src/.ipynb_checkpoints/*
+2_Supervised_Modeling/src/.ipynb_checkpoints/*
+3_Unsupervised_Modeling/src/.ipynb_checkpoints/*
+functions/__pycache__/*
+
+
+# Ignore files in output folders
+1_Fake_Data_Generation/data/output/*
+2_Supervised_Modeling/data/output/*
+3_Unsupervised_Modeling/data/output/*
