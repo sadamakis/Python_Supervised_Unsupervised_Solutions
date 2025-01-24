@@ -108,7 +108,15 @@ def fake_data_generator(
     start_time_initial = time.time()
 
     # sample_variable
-    x_data['sample variable'] = np.array (list (map (lambda x: str(x).replace('True', 'training').replace('False', 'validation'), np.random.choice([True, False], size=sample_size, p=[0.70, 0.30]))))
+#    x_data['sample variable'] = np.array (list (map (lambda x: str(x).replace('True', 'training').replace('False', 'validation'), np.random.choice([True, False], size=sample_size, p=[0.70, 0.30]))))
+    x_data['sample variable'] = np.array (list (map (lambda x: str(x).
+                            replace('sample1', 'training').
+                            replace('sample2', 'random validation').
+                            replace('sample3', 'in-time validation').
+                            replace('sample4', 'out-of-time validation'), 
+                            np.random.choice(['sample1', 'sample2', 'sample3', 'sample4'], 
+                            size=sample_size, 
+                            p=[0.60, 0.20, 0.10, 0.10]))))
     print('Train/Test split took %.2fs. to run'%(time.time() -start_time))
     
     # Configuring the target variable
