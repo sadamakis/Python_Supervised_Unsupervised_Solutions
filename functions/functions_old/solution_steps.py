@@ -7,6 +7,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.regression.linear_model import WLS
 from decorators import time_function 
 
+#COPIED
 class color:
     PURPLE = '\u001b[0;35m'
     CYAN = '\u001b[36;1m'
@@ -21,6 +22,7 @@ class color:
     BLACK = '\u001b[30m'
     
     
+#COPIED
 @time_function
 def weight_var_assignment(
     data_full, 
@@ -38,6 +40,7 @@ def weight_var_assignment(
     
     return data_full, weight_variable_name_solution
     
+#COPIED
 @time_function
 def sample_var_assignment(
     data_full, 
@@ -58,6 +61,7 @@ def sample_var_assignment(
         
     return data_full, sample_values_solution, sample_variable_name_solution
     
+#COPIED
 @time_function
 def convert_character_var(
     data_full, 
@@ -72,6 +76,7 @@ def convert_character_var(
     
     return data_full, character_variables_list
     
+#COPIED
 @time_function
 def convert_numeric_var(
     data_full, 
@@ -87,6 +92,7 @@ def convert_numeric_var(
     
     return data_full, numeric_variables_list
     
+#COPIED
 @time_function
 def split_sample_data(
     data_full, 
@@ -115,6 +121,7 @@ def split_sample_data(
     return data, sample_values_dict
     
     
+#COPIED
 @time_function
 def missing_values_vars(
     sample_values_dict, 
@@ -145,6 +152,7 @@ def missing_values_vars(
         
     return missing_variables_table, missing_variables
     
+#COPIED
 @time_function
 def character_var_levels(
     data, 
@@ -174,6 +182,7 @@ def character_var_levels(
     
     return keep_char_vars_levels
     
+#COPIED
 @time_function
 def keep_num_variables_one_value(
     keep_num_vars, 
@@ -189,6 +198,7 @@ def keep_num_variables_one_value(
     return keep_num_vars_one_v
 
 
+#COPIED
 bic_dict_ = {}
 def perform_lasso(
     sample_values_dict, 

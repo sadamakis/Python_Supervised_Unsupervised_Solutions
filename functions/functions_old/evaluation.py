@@ -400,7 +400,7 @@ def lift_table_weight(score_unit_value, n_bands=10, rows=10):
                 Parameters
                 =============
                 score_unit_value: array_like
-                                Four columns: score, unit, value, weight
+                                Four columns in this exact order: score, unit, value, weight
                 n_bands: int 
                                 Number of bands to separate
                 rows: int

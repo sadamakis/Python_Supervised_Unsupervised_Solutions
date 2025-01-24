@@ -4,6 +4,7 @@ from data_processing import *
 import time
 from IPython.display import display
 
+#COPIED
 class dq_report:
     def __init__(self, 
                 df, 
@@ -21,6 +22,9 @@ class dq_report:
         self.dq_report_file = dq_report_file
         
         # Get missing value rates
+        if self.weight_variable == 'None':
+            self.weight_variable = None
+        
         if self.weight_variable == None:
             missing_list = self.df.apply(lambda x: (sum(x.isnull())/self.df.shape[0]) * 100, axis=0).sort_values(ascending=False)
             self.missing_val_df = pd.DataFrame(missing_list)

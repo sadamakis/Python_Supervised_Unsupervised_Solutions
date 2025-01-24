@@ -6,9 +6,11 @@ from io import StringIO
 from sklearn.metrics import roc_auc_score, roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, accuracy_score, classification_report
 from statsmodels.tools.tools import add_constant 
 
+#COPIED
 # Dictionary to save each summary table for each sample
 glm_bin_summary = {}
 
+#COPIED
 @time_function
 def glm_bin(
     sample_values_solution, 
@@ -51,6 +53,7 @@ def glm_bin(
 sub_summary = {}
 disp_report = {}
 
+#COPIED
 @time_function
 def glm_report(
     data_path, 
@@ -64,6 +67,7 @@ def glm_report(
         pd.DataFrame(temp).to_csv(data_path + '/output/' + str(i) + '.csv', index=False)
     return temp
 
+#COPIED
 @time_function
 def get_evaluation(
     model, 

@@ -4,6 +4,7 @@ import pickle
 from sklearn.preprocessing import StandardScaler
 from decorators import time_function
 
+#COPIED
 def create_missing_info_list(
     input_data, 
     weight_variable, 
@@ -16,6 +17,7 @@ def create_missing_info_list(
     missing_list_df.to_csv(missing_list_file, header=True, index=True, index_label='variable')
     return missing_list_df
     
+#COPIED
 def select_missing_variables_to_drop(
     data_path, 
     sample_name, 
@@ -25,18 +27,21 @@ def select_missing_variables_to_drop(
     missing_list = pd.read_csv('{0}/output/missing_values_results_{1}.csv'.format(data_path, sample_name), sep=',')
     return list(missing_list.loc[missing_list['Missing Value Percentage'] > threshold*100, 'variable'])
     
+#COPIED
 def identify_character_variables(
     input_data
     ): 
     
     return input_data.columns[input_data.dtypes == object]
     
+#COPIED
 def identify_numeric_variables(
     input_data
     ): 
     
     return input_data.columns[input_data.dtypes != object]
     
+#COPIED
 def character_classification(
     input_data, 
     input_variable_list, 
@@ -57,6 +62,7 @@ def character_classification(
 
     return cat_vars
     
+#COPIED
 def character_to_binary(
     input_data, 
     input_variable_list, 
@@ -83,6 +89,7 @@ def character_to_binary(
                 else: 
                     input_data[x + '_' + str(v).replace(".", "_")] = input_data[x].map(lambda t: 1 if t is v else 0)
                     
+#COPIED
 class impute_missing(object):
 
     def __init__(
@@ -152,6 +159,7 @@ def data_split(
     oos = df.tail(len(df) - cut)
     return dev, oos
     
+#COPIED
 def outlier_thresholds(
     dataframe, 
     variable, 
@@ -165,6 +173,7 @@ def outlier_thresholds(
     low_limit = quartile1 - iqr_coef * interquantile_range
     return low_limit, up_limit
     
+#COPIED
 def replace_with_thresholds(
     dataframe, 
     variable, 
@@ -172,6 +181,9 @@ def replace_with_thresholds(
     iqr_coef
     ):
     
+    if weight_variable == 'None':
+        weight_variable = None
+
     low_limit, up_limit = outlier_thresholds(dataframe, variable, iqr_coef)
     if weight_variable == None:
         below_low_limit = np.sum(dataframe[variable] < low_limit) / dataframe.shape[0]
@@ -183,6 +195,7 @@ def replace_with_thresholds(
     dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
     return dataframe, below_low_limit, above_up_limit, up_limit, low_limit
     
+#COPIED
 @time_function
 def replace_outliers(
     input_data, 

@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import random
+import time
 from decorators import time_function 
 
 @time_function

@@ -1,0 +1,223 @@
+1) data import and export
+	load_data
+					method = Load_from, 
+                     data_path = data_location, 
+                     table_name = table_name, 
+                     sample = sample		
+
+2) Data transformation
+	ss.weight_var_assignment
+					data_full = data_full, 
+					weight_variable_name = weight_variable_name
+	ss.sample_var_assignment
+					data_full = data_full, 
+					sample_variable_name = sample_variable_name, 
+					sample_values = sample_values
+	ss.convert_character_var
+					data_full = data_full, 
+					original_candidate_variables_character = original_candidate_variables_character,
+					sample_variable_name_solution = sample_variable_name_solution
+	ss.convert_numeric_var
+					data_full = data_full, 
+					original_candidate_variables_numeric = original_candidate_variables_numeric,
+					weight_variable_name_solution = weight_variable_name_solution, 
+					target_variable_name = target_variable_name	
+	ss.split_sample_data
+					data_full=data_full, 
+					sample_values_solution=sample_values_solution, 
+					sample_variable_name_solution=sample_variable_name_solution	
+	cpd.replace_outliers
+					input_data = data_full, 
+					variables = outlier_variables, 
+					weight_variable = weight_variable_name_solution, 
+					data_path = data_path, 
+					outlier_info_file = 'outlier_info.csv', 
+					iqr_coef = iqr_coef
+	# Split sample data
+	
+	cpd.standardize_data
+					input_data = data, 
+					variables = remaining_predictors, 
+					training_sample = 'data_{}'.format(sample_values_solution[0]), 
+					data_path = data_path, 
+					filename = 'standard_scaler.pkl'
+    
+
+	cpd.character_to_binary
+					input_data = data_full, 
+					input_variable_list = keep_char_vars_levels, 
+					drop = 'last', # Specifies which value to drop from the one hot encoder. None will return binary variables for all categories. 'first' will drop the most populated category. 'last' will drop the less populated category. 
+					protected_class_valid_values = None # Specifies accepted values for the protected class column. For non-protected class conversions use 'None'
+    
+	cpd.impute_missing
+					variables = num_variables_with_missing, 
+					imputation_strategy = impute_missing_imputation_strategy
+		
+	impute_missing.imputation_fit_weight
+					input_data = data['data_{}'.format(sample_values_solution[0])], 
+					weight_variable = weight_variable_name_solution)
+		
+	impute_missing.imputation_transform
+					input_data = data['data_{}'.format(i)]
+
+
+	dr.dimension_reduction
+		dic_of_dfs = data_standardized, 
+        data_path = data_path, 
+        training_sample = 'data_{}'.format(sample_values_solution[0])
+        
+	dimension_reduction.fit_transform
+		pca_components = number_pcs, 
+        solver = 'full', 
+        filename = 'pca_model.pkl'
+        
+	
+
+3) Variable reduction
+					data['data_{}'.format(sample_values_solution[0])]
+					original_candidate_variables
+	ss.missing_values_vars
+					sample_values_dict=sample_values_dict, 
+					data_path=data_path, 
+					data=data, 
+					weight_variable_name_solution=weight_variable_name_solution, 
+					select_missing_variables_to_drop_threshold=select_missing_variables_to_drop_threshold
+	ss.character_var_levels
+					data = data, 
+					data_path = data_path, 
+					sample_values_solution = sample_values_solution,
+					excluded_variables = excluded_variables, 
+					character_classification_threshold = character_classification_threshold
+  
+	ss.keep_num_variables_one_value
+					keep_num_vars = keep_num_vars, 
+					data_path = data_path, 
+					dq_report = 'data_quality_report.csv'
+    
+	vr.calculate_correlations
+					train_df = data['data_{}'.format(sample_values_solution[0])], 
+					features = keep_num_vars_gini, 
+					corr_threshold = corr_threshold, 
+					weight_variable_name = weight_variable_name_solution
+    
+	vr.correlation_elimination
+					method = 'correlation', 
+					features = keep_num_vars_gini, 
+					train_df = data['data_{}'.format(sample_values_solution[0])], 
+					data_path = data_path, 
+					corr_threshold = corr_threshold, 
+					top_n = top_n, 
+					weight_variable_name = weight_variable_name_solution, 
+					correlations = corrs
+    
+	vr.run_VIF
+					VIF_reduction = VIF_reduction, 
+					features = remaining_predictors, 
+					train_df = data['data_{}'.format(sample_values_solution[0])], 
+					data_path = data_path, 
+					vif_threshold = first_vif_threshold, 
+					corr_threshold = corr_threshold, 
+					weight_variable_name = weight_variable_name_solution
+					
+	factor_analysis.FactorAnalysis
+					data = data_standardized, 
+					training_sample = 'data_{}'.format(sample_values_solution[0]), 
+					datapath = data_path, 
+					filename = 'FactorAnalysis'
+    
+	fa.remove_features
+					n_factors = number_factors, 
+					loadings_threshold = loadings_threshold
+									
+					
+    
+4) Feature elimination
+	pp.gini_values_weight
+				   feats = keep_num_vars_one_v, 
+                   input_data = data['data_{}'.format(sample_values_solution[0])], 
+                   target_variable = target_variable_name, 
+                   weight_variable = weight_variable_name_solution, 
+                   data_path = data_path, 
+                   gini_info_file = 'gini_info.csv', 
+                   n_bands = 10
+
+
+	ss.perform_lasso
+					sample_values_dict = sample_values_dict, 
+					sample_values_solution = sample_values_solution, 
+					data = data, 
+					target_variable_name = target_variable_name, 
+					predictor_variables = remaining_predictors, 
+					data_path = data_path, 
+					early_stop = True, 
+					weight_variable_name = weight_variable_name_solution, 
+					standardization=False, 
+					c_min = 1e-4, 
+					c_max = 0.5, 
+					num = 10, 
+					vif_threshold = second_vif_threshold, 
+					random_state = 42
+    
+5) Machine learning 
+
+	Logistic regression 
+		lreg.glm_bin
+					sample_values_solution = sample_values_solution, 
+					data = data, 
+					final_feats = final_vars, 
+					target_variable_name = target_variable_name, 
+					weight_variable_name_solution = weight_variable_name_solution
+		lreg.glm_report
+					data_path = data_path, 
+					glm_bin_summary = lreg_summary
+					
+	KMeans   
+		sm.SelectModel
+					df = pca_data,
+					sample_values_solution = sample_values_solution, 
+					weights = data['data_{}'.format(sample_values_solution[0])][weight_variable_name_solution], 
+					data_path = data_path, 
+					filename = 'ClusterProfile_'
+        
+    
+
+	
+6) Reports
+	dq_report
+				data_full, 
+                data_path = data_path, 
+                variables = character_variables_list + numeric_variables_list, 
+                weight_variable = weight_variable_name_solution, 
+                dq_report_file = 'data_quality_report.csv'
+				
+	lreg.get_evaluation
+				model = lreg_glm, 
+				sample_values_dict = sample_values_dict, 
+				final_feats = final_vars, 
+				target_variable_name = target_variable_name, 
+				data = data, 
+				data_path = data_path
+				
+	fi.FeatureImportance
+				X = data['data_{}'.format(sample_values_solution[0])][variables_list_profiling], 
+				labels = model.labels_, 
+				weights = data['data_{}'.format(sample_values_solution[0])][weight_variable_name_solution], 
+				data_path = data_path, 
+				filename = 'FeatureImportance'
+
+	pro.character_summary_statistics
+				table_name = data_cluster, 
+				variable_list = [x for x in character_variables_list_profiling if x not in [sample_variable_name_solution]], 
+				cluster_variable_name = 'cluster_labels', 
+				weight_variable_name = weight_variable_name_solution,
+				data_path = data_path
+    
+	pro.numeric_summary_statistics
+				table_name = data_cluster, 
+				variable_list = [x for x in numeric_variables_list_profiling if x not in [weight_variable_name_solution]], 
+				cluster_variable_name = 'cluster_labels', 
+				weight_variable_name = weight_variable_name_solution,
+				data_path = data_path
+    
+
+

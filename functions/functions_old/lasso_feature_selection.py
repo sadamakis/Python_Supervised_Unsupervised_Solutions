@@ -6,13 +6,13 @@ from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.metrics import f1_score, make_scorer, log_loss, roc_auc_score
 from statsmodels.tools.tools import add_constant 
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-import feature_elimination as fe
+import variable_reduction as vr
 from decorators import time_function 
 
 class lasso_selection():
     
     def __init__(
-        self, curr_dataset, train, valid, data, target_variable_name, predictor_variables, data_path, standardization=True, early_stop=True, weight_variable_name=None, c_min=1e-4, c_max=1e4, num=20, vif_threshold=5, random_state=42, solver='saga'
+        self, curr_dataset, train, valid, data, target_variable_name, predictor_variables, data_path, standardization=True, early_stop=True, weight_variable_name=None, c_min=1e-4, c_max=1e4, num=20, vif_threshold=5, random_state=42
         ):
         
         self.predictor_variables = predictor_variables
@@ -40,7 +40,6 @@ class lasso_selection():
         self.weights_validation = self.validation_df[self.weights].values
         self.cs = np.linspace(c_min, c_max, num=num)
         self.random_state = random_state
-        self.solver = solver
         self.bic_dict = {"C": [], 
                         "BIC": [],
                         "AIC": [], 
@@ -81,10 +80,10 @@ class lasso_selection():
         ):
     
         yhat = lr.predict_proba(self.X_validation)[:, 1]
-        
+
         if self.weights == 'None':
             self.weights = None
-            
+        
         if self.weights == None:
             return roc_auc_score(self.y_validation, yhat)
         else: 
@@ -96,10 +95,10 @@ class lasso_selection():
         ):
     
         yhat = lr.predict_proba(self.X_validation)[:, 1]
-
+        
         if self.weights == 'None':
             self.weights = None
-        
+
         if self.weights == None:
             LL = -log_loss(self.y_validation, yhat, normalize=False)
         else: 
@@ -115,11 +114,11 @@ class lasso_selection():
         for i in range(len(self.cs)):
             C = self.cs[i]
             print("{0}/{1} models trained".format(count, len(self.cs)))
-            lr = LogisticRegression(penalty='l1', C=C, solver=self.solver, random_state=self.random_state)
+            lr = LogisticRegression(penalty='l1', C=C, solver='liblinear', random_state=self.random_state)
             
             if self.weights == 'None':
                 self.weights = None
-            
+                
             if self.weights == None: 
                 lr = lr.fit(X=self.X_train, y=self.y_train)
             else: 
@@ -204,6 +203,7 @@ class lasso_selection():
         print("Remaining features are: {}".format(np.array(self.predictor_variables)[(coefs != 0).flatten()]))
         print("Eliminated features are: {}".format(np.array(self.predictor_variables)[(coefs == 0).flatten()]))
         self.lasso_features = np.array(self.predictor_variables)[(coefs != 0).flatten()]
+#        self.lasso_X = StandardScaler().fit_transform(self.train_df[self.lasso_features].values)
         return self.lasso_features
     
     def calculate_vifs(
@@ -228,7 +228,7 @@ class lasso_selection():
 
         assert(X[:, 0].std() == 0)
         for i in range(len(features)):
-            self.vifs_dict[features[i]] = fe.weighted_variance_inflation_factor(X, i+1, weight_vector)
+            self.vifs_dict[features[i]] = vr.weighted_variance_inflation_factor(X, i+1, weight_vector)
         self.vifs = pd.DataFrame(self.vifs_dict, index=['Variance Inflation Factor']).T.sort_values('Variance Inflation Factor', ascending=False)
         if not silent:
             display(self.vifs)
@@ -255,10 +255,6 @@ class lasso_selection():
                 temp_remaining_predictors = temp_list
                 self.calculate_vifs(features=temp_remaining_predictors, weight_variable_name=self.weights)
             remaining_predictors = list(self.vifs.index)
-            
-            # Remove np.str_ from the lists:
-            eliminated_predictors = [str(item) for item in eliminated_predictors]
-            remaining_predictors = [str(item) for item in remaining_predictors]
             
             print("Eliminated features: {}".format(eliminated_predictors))
             print("Remaining features: {}".format(remaining_predictors))

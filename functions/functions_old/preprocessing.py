@@ -263,6 +263,7 @@ def gini_values(feats, input_data, target_variable):
     rank = sorted(feat_gini.items(), key=lambda t: t[1], reverse=True)
     return rank 
 
+#COPIED
 @time_function
 def gini_values_weight(feats, input_data, target_variable, weight_variable, data_path, gini_info_file = 'gini_info.csv', n_bands=10):
     feat_gini = dict()
