@@ -1,6 +1,12 @@
 import numpy as np
 import pandas as pd
 import time
+from sklearn.preprocessing import StandardScaler
+import pickle
+from sklearn.decomposition import PCA 
+from matplotlib import pyplot as plt
+import os 
+
 
 from decorators import time_function 
 import useful_functions as ufun
@@ -122,16 +128,24 @@ class impute_missing(object):
         input_data, 
         weight_variable
     ):
+
+        if weight_variable == 'None':
+            weight_variable = None
     
         if self.imputation_strategy == 'median':
             # Import the wquantiles library
             import weighted as wghtd
             for x in self.variables:
-                self.impute_missing[x] = wghtd.median(input_data[x].dropna(), input_data[~input_data[x].isnull()][weight_variable])
-                #self.impute_missing[x] = input_data[x].median()
+                if weight_variable == None:
+                    self.impute_missing[x] = input_data[x].median()
+                else: 
+                    self.impute_missing[x] = wghtd.median(input_data[x].dropna(), input_data[~input_data[x].isnull()][weight_variable])
         elif self.imputation_strategy == 'mean':
             for x in self.variables:
-                self.impute_missing[x] = np.average(input_data[x].dropna(), weights=input_data[~input_data[x].isnull()][weight_variable])
+                if weight_variable == None:
+                    self.impute_missing[x] = input_data[x].mean()
+                else: 
+                    self.impute_missing[x] = np.average(input_data[x].dropna(), weights=input_data[~input_data[x].isnull()][weight_variable])
         else:
             for x in self.variables:
                 self.impute_missing[x] = self.imputation_strategy
@@ -263,3 +277,110 @@ def character_to_binary(
                 else: 
                     input_data[x + '_' + str(v).replace(".", "_")] = input_data[x].map(lambda t: 1 if t is v else 0)
 
+@time_function
+def standardize_data(
+    input_data, 
+    input_variable_list, 
+    training_sample, 
+    weight_variable, 
+    data_path, 
+    filename = 'standard_scaler.pkl'
+    ):
+        
+    if weight_variable == 'None':
+        weight_variable = None
+
+    out = {}
+
+    if not weight_variable:
+        std = StandardScaler().fit(input_data[training_sample][input_variable_list])
+        pickle.dump(std, open(data_path + '/output/' + filename, 'wb'))
+        
+        for k in input_data.keys():
+            out[k] = pd.DataFrame(std.transform(input_data[k][input_variable_list]))
+            out[k].columns = input_data[k][input_variable_list].columns
+
+    else: 
+        df0 = input_data[training_sample][input_variable_list].copy()
+        weights_sample0 = input_data[training_sample][weight_variable].copy()
+        # Compute weighted mean & std from training sample
+        weighted_mean = np.average(df0, axis=0, weights=weights_sample0)
+        weighted_var = np.average((df0 - weighted_mean) ** 2, axis=0, weights=weights_sample0)
+        weighted_std = np.sqrt(weighted_var)
+
+        for k in input_data.keys():
+            # Standardize samples using training sample's mean & std
+            df0_standardized = (df0 - weighted_mean) / weighted_std
+            out[k] = (input_data[k][input_variable_list] - weighted_mean) / weighted_std
+        
+    return out
+    
+
+class dimension_reduction: 
+
+    def __init__(
+        self, 
+        dic_of_dfs, 
+        data_path, 
+        training_sample
+        ):
+        
+        self.data = dic_of_dfs
+        self.data_path = data_path
+        self.training_sample = training_sample
+        
+    @time_function
+    def explore(
+        self, 
+        solver='full'
+        ):
+
+        # Ensure that the graph folder exists
+        if not os.path.isdir('{0}/output/graphs'.format(self.data_path)):
+            os.makedirs('{0}/output/graphs'.format(self.data_path))
+
+        num_predictors = self.data[self.training_sample].shape[1]
+        pca = PCA(n_components = num_predictors, svd_solver = solver).fit(self.data[self.training_sample])
+        
+        PC_values = np.arange(pca.n_components_) + 1
+        
+        # Plot Scree plot and output to graphs folder
+        plt.plot(PC_values, pca.explained_variance_ratio_, 'o-', linewidth=2, color='blue')
+        plt.title('Scree Plot')
+        plt.xlabel('Principal Component')
+        plt.ylabel('Variance Explained')
+        plt.savefig(self.data_path + "/output/graphs/PCA_scree_plot.png")
+        plt.show()
+        
+        # Plot Cumulative variance plot and output to graphs folder
+        plt.plot(PC_values, pca.explained_variance_ratio_.cumsum(), 'o-', linewidth=2, color='blue')
+        plt.title('Cumulative Variance Plot')
+        plt.xlabel('Principal Component')
+        plt.ylabel('Cumulative Variance Explained')
+        plt.savefig(self.data_path + "/output/graphs/PCA_cumulative_variance_plot.png")
+        plt.show()
+
+        print("Variance explained by each principal component:\n", pca.explained_variance_ratio_)
+        print("Cumulative sum of variance explained by each principal component:\n", pca.explained_variance_ratio_.cumsum())
+        
+        return pca
+        
+    def fit_transform(
+        self, 
+        pca_components, 
+        solver='full', 
+        filename='pca_model.pkl'
+        ):
+
+        out = {}
+        
+        # Make PCA object to transform data
+        pca = PCA(n_components = pca_components, svd_solver = solver).fit(self.data[self.training_sample])
+        
+        pickle.dump(pca, open(self.data_path + '/output/' + filename, 'wb'))
+        
+        # loop through data 
+        for k in self.data.keys(): 
+            out[k] = pd.DataFrame(pca.transform(self.data[k]))
+            
+        return out

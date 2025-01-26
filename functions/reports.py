@@ -7,6 +7,10 @@ import data_transformation as dtran
 from sklearn.metrics import roc_auc_score, roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, accuracy_score, classification_report, log_loss, precision_recall_curve
 from matplotlib import pyplot as plt
 import sys
+from sklearn.ensemble import RandomForestClassifier
+import os 
+import weighted as wghtd
+
 
 import useful_functions as ufun
 
@@ -76,7 +80,7 @@ def dq_report(
     data_quality_df = data_quality_df.reset_index()
     
     # Save data quality report
-    data_quality_df = data_quality_df.sort_values(by='Missing Value Percentage', ascending=False)
+    data_quality_df = data_quality_df.sort_values(by=['Missing Value Percentage', 'Variable Name'], ascending=[False, True])
     data_quality_df['Missing Value Percentage'] = data_quality_df['Missing Value Percentage'].apply(lambda x: f"{x:.2f}%")
     data_quality_df.to_csv('{0}/output/{1}'.format(data_path, dq_report_file))
     display(data_quality_df)
@@ -540,3 +544,302 @@ class binary_regression_report():
                 
 #############################################################################################################################################
 #############################################################################################################################################
+
+class FeatureImportance:
+    def __init__(
+        self, 
+        X, 
+        labels, 
+        weights, 
+        data_path, 
+        filename = 'FeatureImportance'
+    ):
+    
+        self.X = X
+        self.labels = labels
+        self.weights = weights
+        self.data_path = data_path
+        self.filename = filename
+        self.ordered_feature_names = X.columns.sort_values().tolist()
+        self.feature_importance = pd.DataFrame()
+        
+    def get_feature_imp_unsup2sup(
+        self, 
+        df
+    ):
+    
+        cluster_feature_weights = {}
+        for label in set(self.labels):
+            binary_enc = np.vectorize(lambda x: 1 if x==label else 0)(self.labels)
+            clf = RandomForestClassifier(random_state=10)
+            clf.fit(df, binary_enc, sample_weight = self.weights)
+            
+            sorted_feature_weight_idxes = np.argsort(clf.feature_importances_)[::-1]
+            
+            ordered_cluster_features = np.take_along_axis(
+                np.array(self.ordered_feature_names), 
+                sorted_feature_weight_idxes, 
+                axis=0)
+            ordered_cluster_feature_weights = np.take_along_axis(
+                np.array(clf.feature_importances_), 
+                sorted_feature_weight_idxes, 
+                axis=0)
+            cluster_feature_weights[label] = list(zip(ordered_cluster_features, 
+                                                        ordered_cluster_feature_weights))
+        self.feature_importances = cluster_feature_weights
+        return cluster_feature_weights
+        
+        
+    def one_hot_encode(
+        self, 
+        columns
+    ):
+        
+        if len(columns) == 0: 
+            return pd.DataFrame()
+        concat_df = pd.concat([pd.get_dummies(self.X[col], drop_first=True, prefix=col) for col in columns], axis=1)
+        
+        return concat_df
+        
+    @time_function
+    def get_report(
+        self
+        ):
+    
+        if len(self.X.select_dtypes(include='object').columns) != 0: 
+            cat_cols = self.X.select_dtypes(include='object')
+            cat_one_hot_df = self.one_hot_encode(cat_cols.columns)
+            df = self.X.join(cat_one_hot_df).drop(cat_cols, axis=1)
+        else: 
+            df = self.X
+            
+        cols = df.columns
+        self.ordered_feature_names = cols.tolist()
+        
+        # Feature importance for each cluster 
+        self.get_feature_imp_unsup2sup(df)
+        # Save feature importances 
+        for label in set(self.labels):
+            pd.DataFrame(self.feature_importances[label]).round(2).to_csv(f'{self.data_path}/output/{self.filename}_feature_imprtnc{label}.csv', index=False)
+            
+        # Overall feature importance, scale by cluster weight (% population)
+        unique_elements, counts_elements = np.unique(self.labels, return_counts=True)
+        
+        label_n_weight = pd.DataFrame(self.labels)
+        label_n_weight = label_n_weight.rename(columns={0: "label"})
+        label_n_weight['weight_variable'] = self.weights
+
+        weighted_list = []
+        for value in unique_elements:
+            weighted_list.append(label_n_weight[label_n_weight['label']==value]['weight_variable'].sum() / label_n_weight['weight_variable'].sum())
+        weight = dict(zip(unique_elements, weighted_list))        
+        wght_feat_imp = pd.DataFrame({'Feature': np.sort(self.ordered_feature_names)})
+        for label in set(self.labels):
+            wght_feat_imp[label] = (pd.DataFrame(self.feature_importances[label]).sort_values(by=0)[1] * weight[label]).values
+        wght_feat_imp.set_index('Feature', inplace=True)
+        wght_feat_imp['overall_feature_importance'] = wght_feat_imp.sum(axis=1)
+        
+        res = pd.DataFrame(wght_feat_imp)
+        res = res.sort_values(by='overall_feature_importance', ascending=False).round(2)
+        res.to_csv(self.data_path + '/output/' + self.filename + '.csv')
+        return res
+
+    @time_function
+    def feature_importance_keep_vars(
+        self, 
+        feature_importance_threshold
+        ):
+
+        fi_table = pd.read_csv('{0}/output/{1}.csv'.format(self.data_path, self.filename), sep=',')
+        return list(fi_table[fi_table['overall_feature_importance'] > feature_importance_threshold]['Feature'])
+
+#############################################################################################################################################
+#############################################################################################################################################
+class clustering_report:
+    
+    def __init__(
+        self, 
+        input_data, 
+        cluster_variable_name, 
+        weight_variable_name, 
+        data_path
+    ):
+    
+        self.input_data = input_data
+        self.cluster_variable_name = cluster_variable_name
+        self.weight_variable_name = weight_variable_name
+        self.data_path = data_path
+
+    def weighted_mean_group(
+        self, 
+        df,
+        data_col,
+        weight_col,
+        by_col
+        ):
+        
+        gr = df.groupby(by_col)
+        return gr.apply(lambda x: np.average(x[data_col].dropna(), weights=x[~x[data_col].isnull()][weight_col]))
+        
+    def weighted_median_group(
+        self, 
+        df,
+        data_col,
+        weight_col,
+        by_col
+        ):
+        
+        gr = df.groupby(by_col)
+        return gr.apply(lambda x: wghtd.median(x[data_col].dropna(), x[~x[data_col].isnull()][weight_col]))
+        
+    def CountFrequency(
+        self, 
+        df, 
+        my_list, 
+        weight, 
+        normalize=False
+        ):
+            
+        # Creating an empty dictionary
+        freq = {}
+        for item, wght in zip(df[my_list], df[weight]):
+            if (item in freq):
+                freq[item] += wght
+            else:
+                freq[item] = wght
+        freq = pd.Series(freq)
+        if normalize == True:
+            freq = freq / sum(df[weight])
+        return freq    
+        
+    def weighted_frequency_group(
+        self, 
+        df,
+        data_col,
+        weight_col,
+        by_col, 
+        normalize=False
+        ):
+        
+        gr = df.groupby(by_col)
+        return gr.apply(lambda x: self.CountFrequency(x, data_col, weight_col, normalize=normalize))
+
+    @time_function
+    def numeric_summary_statistics(
+        self, 
+        variable_list 
+        ):
+        
+        # Ensure that the graph folder exists
+        if not os.path.isdir('{0}/output/graphs'.format(self.data_path)):
+            os.makedirs('{0}/output/graphs'.format(self.data_path))
+            
+        df_stats = pd.DataFrame()
+        for var in variable_list:
+        
+            # Ensure that the graph folder exists
+            if not os.path.isdir('{0}/output/graphs/{1}'.format(self.data_path, var)):
+                os.makedirs('{0}/output/graphs/{1}'.format(self.data_path, var))
+                
+            # mean graphs
+            col_hist_mean = self.weighted_mean_group(self.input_data,var,self.weight_variable_name,self.cluster_variable_name)
+            Y1_overlay = col_hist_mean.tolist()
+            X1_overlay = col_hist_mean.index.tolist()
+            Y2_overlay = [np.average(self.input_data[var].dropna(), weights=self.input_data[~self.input_data[var].isnull()][self.weight_variable_name])]*len(self.input_data[self.cluster_variable_name].value_counts())
+            
+            plt.xlabel("Cluster labels")
+            plt.ylabel(var)
+            plt.bar(X1_overlay, Y1_overlay, color='maroon', width=0.4)
+            plt.plot(X1_overlay, Y2_overlay, label='Overall average')
+            plt.legend()
+            plt.savefig('{0}/output/graphs/{1}/{1}_mean.png'.format(self.data_path, var))
+            plt.show()
+            
+            # median graphs
+            col_hist_med = self.weighted_median_group(self.input_data,var,self.weight_variable_name,self.cluster_variable_name)
+            Y1_overlay = col_hist_med.tolist()
+            X1_overlay = col_hist_med.index.tolist()
+            Y2_overlay = [wghtd.median(self.input_data[var].dropna(), self.input_data[~self.input_data[var].isnull()][self.weight_variable_name])]*len(self.input_data[self.cluster_variable_name].value_counts())
+            
+            plt.xlabel("Cluster labels")
+            plt.ylabel(var)
+            plt.bar(X1_overlay, Y1_overlay, color='blue', width=0.4)
+            plt.plot(X1_overlay, Y2_overlay, label='Overall median')
+            plt.legend()
+            plt.savefig('{0}/output/graphs/{1}/{1}_median.png'.format(self.data_path, var))
+            plt.show()
+            
+            # Create summary statistics table
+            #df_stats_temp = pd.DataFrame(self.weighted_mean_group(self.input_data, var, self.weight_variable_name, self.cluster_variable_name)).rename(columns={0: var}).T
+            df_stats_temp = pd.DataFrame(col_hist_mean).rename(columns={0: var}).T
+            df_stats_temp['Baseline'] = [np.average(self.input_data[var].dropna(), weights=self.input_data[~self.input_data[var].isnull()][self.weight_variable_name])]
+            for i in np.unique(self.input_data['cluster_labels']):
+                df_stats_temp["{0}{1}".format(i, '_baseline_diff')] = (df_stats_temp[i] - df_stats_temp['Baseline']) / df_stats_temp['Baseline']
+            df_stats_temp = round(df_stats_temp, 2)
+            
+            # Add a column that identifies which cluster is more prominent 
+            df_stats_columns = df_stats_temp.columns.tolist()
+            df_stats_columns_str = [x for x in df_stats_columns if isinstance(x, str)]
+            columns_to_select = [col for col in df_stats_columns_str if col.endswith('_baseline_diff')]
+            df_stats_temp["Prominent cluster"] = df_stats_temp[columns_to_select].abs().idxmax(axis=1).str.replace('_baseline_diff', '', regex=False)
+            
+            # Format the columns
+            for i in np.unique(self.input_data['cluster_labels']):
+                df_stats_temp["{0}{1}".format(i, '_baseline_diff')] = ["{:.2%}".format(i) for i in df_stats_temp["{0}{1}".format(i, '_baseline_diff')]]
+            
+            df_stats = pd.concat([df_stats, df_stats_temp], ignore_index=False)
+            
+        df_stats = df_stats.reset_index().rename(columns={'index': "Attribute"})
+        df_stats.to_csv('{}/output/summary_statistics_numeric.csv'.format(self.data_path), index=False)
+        display(df_stats)
+                
+    @time_function
+    def character_summary_statistics(
+        self, 
+        variable_list 
+        ):
+        
+        # Ensure that the graph folder exists
+        if not os.path.isdir('{0}/output/graphs'.format(self.data_path)):
+            os.makedirs('{0}/output/graphs'.format(self.data_path))
+            
+        df_stats = pd.DataFrame()
+        for var in variable_list:
+            t1 = pd.DataFrame(self.weighted_frequency_group(self.input_data, var, self.weight_variable_name, self.cluster_variable_name, normalize=True).sort_index()).T.stack().reset_index().rename(columns={'level_1': 'labels'})
+            t2 = pd.DataFrame(self.CountFrequency(self.input_data, var, self.weight_variable_name, normalize=True).sort_index()).reset_index().rename(columns={'index': 'labels', 0: 'Baseline'})
+            t12 = t1.join(t2, rsuffix='_1').drop('labels_1', axis=1).rename(columns={'level_0': "Attribute"})
+            t12['Attribute'] = var
+            
+            plot = t12.plot(kind='bar', legend=True, xlabel=var, ylabel='Percentage')
+            plot.figure.savefig('{0}/output/graphs/{1}_cat_hist.png'.format(self.data_path, var))
+            
+            for i in np.unique(self.input_data['cluster_labels']):
+                t12["{0}{1}".format(i, '_baseline_diff')] = (t12[i] - t12['Baseline']) / t12['Baseline']
+            t12 = round(t12, 2)
+            
+            # Add a column that identifies which cluster is more prominent 
+            df_stats_columns = t12.columns.tolist()
+            df_stats_columns_str = [x for x in df_stats_columns if isinstance(x, str)]
+            columns_to_select = [col for col in df_stats_columns_str if col.endswith('_baseline_diff')]
+            t12["Prominent cluster"] = t12[columns_to_select].abs().idxmax(axis=1).str.replace('_baseline_diff', '', regex=False)
+            
+            # Format the columns
+            for i in np.unique(self.input_data['cluster_labels']):
+                t12["{0}{1}".format(i, '_baseline_diff')] = ["{:.2%}".format(j) for j in t12["{0}{1}".format(i, '_baseline_diff')]]
+                t12[i] = ["{:.2%}".format(i) for i in t12[i]]
+            t12["Baseline"] = ["{:.2%}".format(i) for i in t12['Baseline']]
+            
+    #        df_stats = df_stats.append(t12)
+            df_stats = pd.concat([df_stats, t12], ignore_index=False)
+            
+        df_stats.to_csv('{}/output/summary_statistics_character.csv'.format(self.data_path), index=False)
+        display(df_stats)
+
+#############################################################################################################################################
+#############################################################################################################################################
+
+
+
+
+
+        

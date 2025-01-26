@@ -19,6 +19,7 @@ import weighted as wghtd
 #    del df['_data_times_weight'], df['_weight_where_notnull']
 #    return result
 
+# COPIED
 def weighted_mean_group(
     df,
     data_col,
@@ -28,7 +29,8 @@ def weighted_mean_group(
     
     gr = df.groupby(by_col)
     return gr.apply(lambda x: np.average(x[data_col].dropna(), weights=x[~x[data_col].isnull()][weight_col]))
-    
+
+# COPIED  
 def weighted_median_group(
     df,
     data_col,
@@ -39,6 +41,7 @@ def weighted_median_group(
     gr = df.groupby(by_col)
     return gr.apply(lambda x: wghtd.median(x[data_col].dropna(), x[~x[data_col].isnull()][weight_col]))
     
+# COPIED
 def CountFrequency(df, my_list, weight, normalize=False):
     # Creating an empty dictionary
     freq = {}
@@ -52,6 +55,7 @@ def CountFrequency(df, my_list, weight, normalize=False):
         freq = freq / sum(df[weight])
     return freq    
     
+# COPIED
 def weighted_frequency_group(
     df,
     data_col,
@@ -63,6 +67,7 @@ def weighted_frequency_group(
     gr = df.groupby(by_col)
     return gr.apply(lambda x: CountFrequency(x, data_col, weight_col, normalize=normalize))
 
+# COPIED
 @time_function
 def numeric_summary_statistics(
     table_name, 
@@ -126,6 +131,7 @@ def numeric_summary_statistics(
     display(df_stats)
             
     
+# COPIED
 @time_function
 def character_summary_statistics(
     table_name, 
