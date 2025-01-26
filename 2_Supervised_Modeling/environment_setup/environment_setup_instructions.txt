@@ -21,4 +21,4 @@ After cloning the Sotiris_Solutions repository, run the following commands in yo
 
 8. C:\Users\creep\miniconda3\envs\Supervised_Modeling\python.exe -m pip install --upgrade pip
 
-9. conda env export > Supervised_Modeling.yml
+9. conda env export > Supervised_Modeling_env.yml

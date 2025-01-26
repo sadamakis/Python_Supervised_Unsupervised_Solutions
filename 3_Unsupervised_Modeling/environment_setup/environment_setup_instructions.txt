@@ -18,10 +18,10 @@ After cloning the Sotiris_Solutions repository, run the following commands in yo
 6. conda config --env --add channels pypi
 7. conda config --show channels
 
-8. conda install pandas statsmodels scikit-learn matplotlib wquantiles ipykernel
+8. conda install pandas statsmodels scikit-learn matplotlib wquantiles ipykernel jinja2
 9. python -m ipykernel install --user --name Unsupervised_Modeling --display-name "Unsupervised Modeling Solution"
 
 10. C:\Users\creep\miniconda3\envs\Unsupervised_Modeling\python.exe -m pip install --upgrade pip
 11. pip install factor_analyzer (this installed version factor_analyzer-0.5.1)
 
-12. conda env export > Unsupervised_Modeling.yml
+12. conda env export > Unsupervised_Modeling_env.yml
