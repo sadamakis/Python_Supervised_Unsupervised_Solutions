@@ -13,7 +13,7 @@ from evaluation import gini_weight
 from sklearn.metrics import roc_auc_score
 from decorators import time_function 
 
-
+# COPIED
 def get_cat_vars(df):
                 """Get categorical variable list.
                 
@@ -29,6 +29,7 @@ def get_cat_vars(df):
                 """
                 return df.columns[df.dtypes == object]
                 
+# COPIED
 def get_num_vars(df):
                 """Get numerical variable list.
                 
@@ -44,6 +45,7 @@ def get_num_vars(df):
                 """
                 return df.columns[df.dtypes != object]
                 
+# COPIED
 def classify_vars(df):
                 """Classify variables into categorical and numerical.
                 Parameters
@@ -160,6 +162,7 @@ def cats_small_num(df, cats_small, drop):
                         else: 
                             df[x + '_' + str(v)] = df[x].map(lambda t: 1 if t is v else 0)
                                                                                 
+# COPIED 
 def sample_data(df, target, pos, neg):
                 """Sample the records by positive and negative"""
                 df_pos = df[df[target] == 1].sample(frac=pos, replace=False)
@@ -295,6 +298,7 @@ def gini_selection_weight(feats, input_data, target_variable, weight_variable, n
     rank = sorted(feat_gini.items(), key=lambda t: abs(t[1]), reverse=True)
     return [x[0] for x in rank if abs(x[1]) > gini_threshold] 
 
+# COPIED 
 def target_stratified_sampling(
     df, # Input dataframe that has the target value
     target_variable, # Target variable name

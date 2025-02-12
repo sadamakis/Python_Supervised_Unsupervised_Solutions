@@ -4,6 +4,7 @@ import random
 import time
 from decorators import time_function 
 
+# COPIED
 @time_function
 def load_data(
     method, 

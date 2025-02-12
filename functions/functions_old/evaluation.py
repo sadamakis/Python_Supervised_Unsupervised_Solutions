@@ -54,7 +54,7 @@ def _capture_value(resp, n_bands=10, top=10):
                 return pd.DataFrame(np.c_[resp_sum, resp_cum, resp_adr, resp_frac], \
                                                                                                 columns = ['Value', 'Cumulative Value', 'VDR', 'Cumulative VDR']).head(top)
                 
-
+# COPIED
 def _expand_unit(alist, weight):
                 """Expand unit by weight."""
                 expanded = []
@@ -65,6 +65,7 @@ def _expand_unit(alist, weight):
                                                 expanded.append(x)
                 return expanded
 
+# COPIED
 def _expand_value(alist, weight):
                 """Expand value by weight."""
                 expanded = []
@@ -346,7 +347,7 @@ def plot_fpr_table(fpr, xlim=None, ylim=None):
 
 
 
-
+# COPIED
 def _capture_unit_weight(resp, weight, n_bands=10, top=10):
     arr = np.asarray(weight)
     cum_arr = arr.cumsum() / arr.sum()
@@ -371,6 +372,7 @@ def _capture_unit_weight(resp, weight, n_bands=10, top=10):
                     columns = ['Quantile Unit', '# Cases', '# Responses', 'Cumulative # Responses', '% Response', 'FPR', \
                     'Cumulative FPR', 'ADR', 'Cumulative ADR', 'Lift', 'Cumulative Lift']).head(top)
 
+# COPIED
 def _capture_value_weight(resp, weight, n_bands=10, top=10):
     arr = np.asarray(weight)
     cum_arr = arr.cumsum() / arr.sum()
@@ -393,6 +395,7 @@ def _capture_value_weight(resp, weight, n_bands=10, top=10):
     return pd.DataFrame(np.c_[w_resp_frac, resp_sum, resp_cum, resp_adr, resp_frac], \
         columns = ['Quantile Value', 'Value', 'Cumulative Value', 'VDR', 'Cumulative VDR']).head(top)
 
+# COPIED
 @time_function
 def lift_table_weight(score_unit_value, n_bands=10, rows=10):
                 """Generate the lifting table.
@@ -424,6 +427,7 @@ def lift_table_weight(score_unit_value, n_bands=10, rows=10):
 
                 return pd.concat([unit_caprate, value_caprate], axis=1)
 
+# COPIED
 @time_function
 def plot_ADR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
@@ -440,6 +444,7 @@ def plot_ADR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
     
+# COPIED
 @time_function
 def plot_cADR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
@@ -456,6 +461,7 @@ def plot_cADR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
 
+# COPIED
 @time_function
 def plot_FPR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
@@ -471,6 +477,7 @@ def plot_FPR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
 
+# COPIED
 @time_function
 def plot_cFPR_Quantile(lt, xlim=None, ylim=None):
     plt.figure()
@@ -486,6 +493,7 @@ def plot_cFPR_Quantile(lt, xlim=None, ylim=None):
     plt.tight_layout()
     plt.show()
 
+# COPIED
 @time_function
 def plot_ROC_curve(
     table_name, # Table name
@@ -516,6 +524,7 @@ def plot_ROC_curve(
     # show the plot
     pyplot.show()
     
+# COPIED
 @time_function
 def plot_precision_recall_curve(
     table_name, # Table name that has the target variable, the predicted variable, and the weights
@@ -539,6 +548,7 @@ def plot_precision_recall_curve(
     pyplot.show()
 
 
+# COPIED
 @time_function
 def plot_cutoffs(
     table_name, # Table name that has the target variable, the predicted variable, and the weights

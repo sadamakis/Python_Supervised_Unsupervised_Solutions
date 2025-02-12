@@ -7,9 +7,11 @@ from random import sample
 from decorators import time_function
 import time
 
+# COPIED
 def createList (r1, r2):
     return [item for item in range (r1, r2+1)]
 
+# COPIED
 @time_function
 def fake_data_generator(
     #The output of this function is a pandas dataframe that has: target variable, model predictors. 

@@ -1,5 +1,6 @@
 import time
 
+# COPIED
 def time_function(func):
     def inner_time(*args, **kwargs):
         begin = time.time()
