@@ -231,7 +231,7 @@ class FactorAnalysis:
         loadings_c2 = loadings_c1.copy()
         columns_to_style = loadings_c2.columns.tolist()
         columns_to_style = [x for x in columns_to_style if x not in ["Highest Loading", "variable_name"]]  
-        loadings_c2 = loadings_c2.style.map(lambda x: 'background-color: yellow' if abs(x) >= 0.6 else None, subset=columns_to_style)
+        loadings_c2 = loadings_c2.style.map(lambda x: 'background-color: yellow' if abs(x) >= loadings_threshold else None, subset=columns_to_style)
         print('Factor loadings table')
         display(loadings_c2)
         loadings_c1.to_csv(f'{self.datapath}/output/{self.filename}_loadings.csv')
@@ -242,7 +242,18 @@ class FactorAnalysis:
         for f in loadings.columns: 
             high_loadings = loadings.index[loadings[f].abs() > loadings_threshold].tolist()
             res[f] += high_loadings
-            to_drop += high_loadings[1:]
+            # The following code selects one variable from each loading in random
+#            to_drop += high_loadings[1:]
+            # The following code selects the variable with the highest value in a loading 
+            keep_variable = loadings_c1[loadings_c1['Highest Loading'] == f].loc[loadings_c1[loadings_c1['Highest Loading'] == f][f].abs().nlargest(1).index]['variable_name'].iloc[0]
+            to_drop_list = high_loadings.copy()
+            if to_drop_list!=[]:
+                to_drop_list.remove(keep_variable)
+            to_drop += to_drop_list
+            
+        # Dedupe the elements in the to_drop list
+        to_drop = list(set(to_drop))
+            
         remaining_predictors = self.X.columns.drop(to_drop).tolist()
         with open(f'{self.datapath}/output/{self.filename}_summary.json', 'w') as f:
             json.dump(res, f, indent=4)
