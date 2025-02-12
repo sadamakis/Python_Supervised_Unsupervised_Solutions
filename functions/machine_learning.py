@@ -110,16 +110,16 @@ class clustering:
         self, 
         df, 
         sample_values_solution, 
-        weights, 
+        weights_dict, 
         data_path, 
         filename = 'ClusterProfile'
         ):
         
-#        self.train_data = pd.concat((df['data_{}'.format(sample_values_solution[0])], weights.reset_index(drop=True)), axis=1)
-        self.train_data = pd.concat((df['data_{}'.format(sample_values_solution[0])], weights), axis=1)
+        self.train_weights = weights_dict['data_{}'.format(sample_values_solution[0])]
+        self.train_data = pd.concat((df['data_{}'.format(sample_values_solution[0])], self.train_weights), axis=1)
         self.df = df
         self.sample_values = sample_values_solution
-        self.weights = weights
+        self.weights_dict = weights_dict
         self.data_path = data_path
         self.filename = filename
         
@@ -137,12 +137,13 @@ class clustering:
         self.profile_df = pd.DataFrame({model_inputs["test_arg"]: model_inputs["test_values"],
                                         'Silhouette score': [np.nan]*len(model_inputs["test_values"]),
                                         'Calinski Harabasz score': [np.nan]*len(model_inputs["test_values"]),
-                                        'Davies Bouldin score': [np.nan]*len(model_inputs["test_values"]),
-                                        'Adjusted Rand Index score': [np.nan]*len(model_inputs["test_values"])
+                                        'Davies Bouldin score': [np.nan]*len(model_inputs["test_values"])
+#                                        'Adjusted Rand Index score': [np.nan]*len(model_inputs["test_values"])
                                         })
                                         
         if self.model_nm.lower() == 'kmeans': 
             self.profile_df['WCSS'] = [np.nan]*len(model_inputs["test_values"])
+            self.profile_df['Adjusted Rand Index score'] = [np.nan]*len(model_inputs["test_values"])
             self.profile_df['Stability score (Bootstrapped ARI)'] = [np.nan]*len(model_inputs["test_values"])
             self.profile_df['Bootstrapped Std. Dev. Scaled WCSS'] = [np.nan]*len(model_inputs["test_values"])
         if self.model_nm.lower() == 'dbscan':
@@ -241,7 +242,6 @@ class clustering:
         indices = []
         for i in range(boostraps):
             sample_indices = rng.randint(0, X.shape[0], X.shape[0])
-            indices.append(sample_indices)
             est = self.model(**args)
             if hasattr(est, "random_state"): 
                 est.random_state = rng.randint(1e5)
@@ -250,19 +250,33 @@ class clustering:
             est.fit(X_bootstrap, sample_weight = weights_bootstrap)
             relabel = -np.ones(X.shape[0], dtype=int)
             relabel[sample_indices] = est.labels_
+            
+#            if self.model_nm.lower() == 'dbscan':
+#                X_bootstrap = X_bootstrap[relabel != -1]
+#                weights_bootstrap = weights_bootstrap[relabel != -1]
+#                sample_indices = sample_indices[relabel != -1]
+#                sample_indices1 = np.arange(len(relabel))[relabel != -1]
+#                import pdb; pdb.set_trace()
+#                relabel = relabel[relabel != -1]
+            
+            indices.append(sample_indices)
             labels.append(relabel)
+#            weights_list.append(weights_bootstrap.values)
         scores = []
         
-        # Enumerate to avoid testing the similarity to the same bootstrap samples
-        num=0
-        for l, i in zip(labels, indices):
-            num = num+1
-            for k, j in zip(labels[num:], indices[num:]):
-                in_both = np.intersect1d(i, j)
-#                scores.append(adjusted_rand_score(l[in_both], k[in_both]))
-                scores.append(self.weighted_adjusted_rand_index(labels_true=l[in_both], labels_pred=k[in_both], sample_weights=weight[in_both]))
+        # ARI is not implemented for DBSCAN
+        if self.model_nm.lower() == 'dbscan':
+            scores.append(0)
+        else:        
+            # Enumerate to avoid testing the similarity to the same bootstrap samples
+            num=0
+            for l, i in zip(labels, indices):
+                num = num+1
+                for k, j in zip(labels[num:], indices[num:]):
+                    in_both = np.intersect1d(i, j)
+                    scores.append(self.weighted_adjusted_rand_index(labels_true=l[in_both], labels_pred=k[in_both], sample_weights=weight[in_both]))
         return np.mean(scores)
-        
+               
     def cluster_stability_kmeans(
         self, 
         t, 
@@ -284,7 +298,6 @@ class clustering:
         for b in range(bootstraps):
             new_model = self.model(**args)
             new_model.fit(orig, sample_weight=weights)
-#            ari.append(adjusted_rand_score(orig_model.labels_, new_model.labels_))
             ari.append(self.weighted_adjusted_rand_index(labels_true=orig_model.labels_, labels_pred=new_model.labels_, sample_weights=weights))
             
         return np.mean(ari)
@@ -309,7 +322,7 @@ class clustering:
             m = self.model(**args)
             m.fit(X_sample, sample_weight=weights_sample)
     #        scores.append(m.inertia_ / len(X_sample))
-            scores.append(sum(weights_sample.values[i] * np.linalg.norm(X_sample.values[i] - m.cluster_centers_[m.labels_[i]])**2 for i in range(len(X_sample))) / len(X_sample))
+            scores.append(sum(weights_sample.values[i] * np.linalg.norm(X_sample.values[i] - m.cluster_centers_[m.labels_[i]])**2 for i in range(len(X_sample))) / np.sum(weights_sample.values))
        
         return np.std(scores)
         
@@ -456,10 +469,7 @@ class clustering:
         
     def get_metrics(
         self, 
-        labels, 
-        t, 
-        bootstraps, 
-        sample_size
+        labels
         ):
             
 # Set random seed for reproducibility
@@ -467,24 +477,37 @@ class clustering:
         
         if self.model_nm.lower() == 'dbscan':
             df = self.df['data_{}'.format(self.sample_values[0])][labels != -1]
+            train_weights_ = self.train_weights[labels != -1]
             labels = labels[labels != -1]
         else: 
             df = self.df['data_{}'.format(self.sample_values[0])]
+            train_weights_ = self.train_weights
         # Silhouette score 
 #        ss = round(silhouette_score(df, labels), 2)
+        sample_sz = 100000
+        if len(df)>sample_sz:
+        #   Sample the data
+            df_sampled = df.sample(n=sample_sz, random_state=42)
+            train_weights_sampled = train_weights_.sample(n=sample_sz, random_state=42)
+            labels_pd = pd.DataFrame(labels)
+            labels_pd.index = df.index
+            labels_sampled = labels_pd.sample(n=sample_sz, random_state=42).values     
+            
         # The calculation of the weighted Silhouette Score is approximate
-        silhouette_vals = silhouette_samples(df, labels)
-        ss = round(np.average(silhouette_vals, weights=self.weights), 2)
+            silhouette_vals = silhouette_samples(df_sampled, labels_sampled)
+            ss = round(np.average(silhouette_vals, weights=train_weights_sampled), 2)
+        else: 
+        # The calculation of the weighted Silhouette Score is approximate
+            silhouette_vals = silhouette_samples(df, labels)
+            ss = round(np.average(silhouette_vals, weights=train_weights_), 2)
         # Calinski Harabasz score 
 #        cs = round (calinski_harabasz_score(df, labels), 2)
         # The calculation of the weighted Calinski Harabasz Score is approximate
-        cs = round(self.weighted_calinski_harabasz_score(df.values, labels, np.array(self.weights)), 2)
+        cs = round(self.weighted_calinski_harabasz_score(df.values, labels, np.array(train_weights_)), 2)
         # Davies Bouldin score 
 #        db = round(davies_bouldin_score(df, labels), 2)
-        db = round(self.weighted_davies_bouldin_score_fast(df.values, labels, np.array(self.weights)), 2)
-        # Adjusted Rand Index 
-        ari = round(self.adjusted_rand_index(t, bootstraps, sample_size, weight = np.array(self.weights)), 2)
-        return (ss, cs, db, ari)
+        db = round(self.weighted_davies_bouldin_score_fast(df.values, labels, np.array(train_weights_)), 2)
+        return (ss, cs, db)
         
     @time_function
     def get_profile(
@@ -505,19 +528,21 @@ class clustering:
             
             df = self.df['data_{}'.format(self.sample_values[0])].values
             labels = m.labels_
-            weights_array = self.weights.values
+            weights_array = self.train_weights.values
             
             # Add metrics to profile_df
             if len(set(labels)) - (1 if -1 in labels else 0) > 1:
-                metrics = self.get_metrics(labels, t, bootstraps, sample_size)
+                metrics = self.get_metrics(labels)
                 if self.model_nm.lower() == 'kmeans': 
 #                    metrics += (round(m.inertia_, 2), )
                     metrics += (round(sum(weights_array[i] * np.linalg.norm(df[i] - m.cluster_centers_[labels[i]])**2 for i in range(len(df))), 2), )
+                    metrics += (round(self.adjusted_rand_index(t, bootstraps, sample_size, weight = np.array(self.train_weights)), 2), )
                     metrics += (round(self.cluster_stability_kmeans(t, bootstraps, sample_size), 2), )
                     metrics += (round(self.bootstrap_std_scaled_wcss(t, bootstraps, sample_size), 2), )
                 if self.model_nm.lower() == 'dbscan': 
                     metrics += (len(set(labels)) - (1 if -1 in labels else 0), )
                     metrics +=(np.round(np.sum(labels == -1) / len(labels), 3), )
+
                 self.profile_df.loc[self.profile_df[self.indep_param_nm]==t, self.profile_df.columns[1:]] = metrics
                 
             print('Cluster profiling for {0} took {1}s. to run'.format(t, round(time.time()-t0, 2)))
@@ -561,7 +586,7 @@ class clustering:
         self
         ):
         
-        self.valid_df = pd.DataFrame({'Split': self.sample_values,
+        self.valid_df = pd.DataFrame({'Sample': self.sample_values,
                                         'Sample Size': [np.nan]*len(self.sample_values),
                                         'Silhouette score': [np.nan]*len(self.sample_values),
                                         'Scaled Calinski Harabasz score': [np.nan]*len(self.sample_values),
@@ -570,52 +595,55 @@ class clustering:
         if self.model_nm.lower() =='kmeans':
             self.valid_df['Scaled WCSS'] = [np.nan]*len(self.sample_values)
             
-        for i, split in enumerate(self.sample_values):
-            df = self.df['data_{}'.format(split)]
-            
-            labels = self.fit_model.predict(df)
-            
-            # Sample size 
-            self.valid_df.loc[self.valid_df.Split == split, "Sample Size"] = len(labels)
-            # Silhouette score
-            if len(df)>100000:
-                self.valid_df.loc[self.valid_df.Split == split, "Silhouette score"] = round(silhouette_score(df, labels, sample_size=100000), 3)
-            else:
-                self.valid_df.loc[self.valid_df.Split == split, "Silhouette score"] = round(silhouette_score(df, labels, sample_size=None), 3)
-            # Scaled Calinski Harabasz score
-            self.valid_df.loc[self.valid_df.Split == split, "Scaled Calinski Harabasz score"] = round(calinski_harabasz_score(df, labels) / len(labels), 3)
-            # Davies Bouldin score
-            self.valid_df.loc[self.valid_df.Split == split, "Davies Bouldin score"] = round(davies_bouldin_score(df, labels), 3)
-            if self.model_nm.lower() == 'kmeans': 
-                # Scaled WCSS
-#                self.valid_df.loc[self.valid_df.Split == split, "Scaled WCSS"] = round(self.fit_model.score(df) * -1 / len(labels), 3)
-                self.valid_df.loc[self.valid_df.Split == split, "Scaled WCSS"] = round(sum(self.weights.values[i] * np.linalg.norm(df.values[i] - self.fit_model.cluster_centers_[labels[i]])**2 for i in range(len(df.values))) / np.sum(self.weights.values), 3)
+        if self.model_nm.lower() == 'dbscan':
+            print('DBSCAN object has no attribute predict, therefore fitting the model on non-train data is not possible unless customized code is used')
+        else: 
+            for i, split in enumerate(self.sample_values):
+                df = self.df['data_{}'.format(split)]
+                weights_df = self.weights_dict['data_{}'.format(split)]
+                labels = self.fit_model.predict(df)
                 
-            for j in np.unique(labels):
-                self.valid_df.loc[self.valid_df.Split == split, "Cluster {} Size".format(j+1)] = round((labels == j).mean(), 3)
+                # Sample size 
+    #            self.valid_df.loc[self.valid_df.Sample == split, "Sample Size"] = len(labels)
+                self.valid_df.loc[self.valid_df.Sample == split, "Sample Size"] = round(np.sum(weights_df.values), 0)
+                # Silhouette score
+                sample_sz = 100000
+                if len(df)>sample_sz:
+                #   Sample the data
+                    df_sampled = df.sample(n=sample_sz, random_state=42)
+                    weights_df_sampled = weights_df.sample(n=sample_sz, random_state=42)
+                    labels_pd = pd.DataFrame(labels)
+                    labels_pd.index = df.index
+                    labels_sampled = labels_pd.sample(n=sample_sz, random_state=42).values     
+                    
+                # The calculation of the weighted Silhouette Score is approximate
+                    silhouette_vals = silhouette_samples(df_sampled, labels_sampled)
+                    self.valid_df.loc[self.valid_df.Sample == split, "Silhouette score"] = round(np.average(silhouette_vals, weights=weights_df_sampled), 3)
+                else:
+    #                self.valid_df.loc[self.valid_df.Sample == split, "Silhouette score"] = round(silhouette_score(df, labels, sample_size=None), 3)
+                # The calculation of the weighted Silhouette Score is approximate
+                    silhouette_vals = silhouette_samples(df, labels)
+                    self.valid_df.loc[self.valid_df.Sample == split, "Silhouette score"] = round(np.average(silhouette_vals, weights=weights_df), 3)
+                # Scaled Calinski Harabasz score
+    #            self.valid_df.loc[self.valid_df.Sample == split, "Scaled Calinski Harabasz score"] = round(calinski_harabasz_score(df, labels) / len(labels), 3)
+                self.valid_df.loc[self.valid_df.Sample == split, "Scaled Calinski Harabasz score"] = round(self.weighted_calinski_harabasz_score(df.values, labels, np.array(weights_df)) / np.sum(weights_df.values), 3)
+                # Davies Bouldin score
+    #            self.valid_df.loc[self.valid_df.Sample == split, "Davies Bouldin score"] = round(davies_bouldin_score(df, labels), 3)
+                self.valid_df.loc[self.valid_df.Sample == split, "Davies Bouldin score"] = round(self.weighted_davies_bouldin_score_fast(df.values, labels, np.array(weights_df)), 3)
+                # Scaled WCSS
+                if self.model_nm.lower() == 'kmeans': 
+    #                self.valid_df.loc[self.valid_df.Sample == split, "Scaled WCSS"] = round(self.fit_model.score(df) * -1 / len(labels), 3)
+                    self.valid_df.loc[self.valid_df.Sample == split, "Scaled WCSS"] = round(sum(weights_df.values[i] * np.linalg.norm(df.values[i] - self.fit_model.cluster_centers_[labels[i]])**2 for i in range(len(df.values))) / np.sum(weights_df.values), 3)
+                    
+                for j in np.unique(labels):
+    #                self.valid_df.loc[self.valid_df.Sample == split, "Cluster {} Size".format(j+1)] = round((labels == j).mean(), 3)
+                    weights_labels_df = pd.DataFrame({'weight_variable': weights_df, 'label_variable': labels})
+                    self.valid_df.loc[self.valid_df.Sample == split, "Cluster {} Size".format(j+1)] = round(weights_labels_df[weights_labels_df['label_variable']==j]['weight_variable'].sum() / weights_labels_df['weight_variable'].sum(), 3)                
+                
+        # Write output
+        self.valid_df.to_csv(self.data_path + '/output/' + self.filename + self.model_nm + '_validate.csv', index=False)
                 
         return self.valid_df
-
-
-
-        # Silhouette score 
-#        ss = round(silhouette_score(df, labels), 2)
-        # The calculation of the weighted Silhouette Score is approximate
-#        silhouette_vals = silhouette_samples(df, labels)
-#        ss = round(np.average(silhouette_vals, weights=self.weights), 2)
-        # Calinski Harabasz score 
-#        cs = round (calinski_harabasz_score(df, labels), 2)
-        # The calculation of the weighted Calinski Harabasz Score is approximate
-#        cs = round(self.weighted_calinski_harabasz_score(df.values, labels, np.array(self.weights)), 2)
-        # Davies Bouldin score 
-#        db = round(davies_bouldin_score(df, labels), 2)
-#        db = round(self.weighted_davies_bouldin_score_fast(df.values, labels, np.array(self.weights)), 2)
-        # Adjusted Rand Index 
-#        ari = round(self.adjusted_rand_index(t, bootstraps, sample_size, weight = np.array(self.weights)), 2)
-
-
-
-
 
 #############################################################################################################################################
 #############################################################################################################################################
