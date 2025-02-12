@@ -677,9 +677,21 @@ class clustering_report:
         weight_col,
         by_col
         ):
+         
+        # Drop the rows that the group has only missing values
+        df_origin = df.copy()
+        origin_values = df_origin[by_col].value_counts().sort_index()
         
+        df_mis = pd.DataFrame(df[by_col].value_counts().sort_index() - df.groupby(by_col).apply(lambda g: g[data_col].isna().sum()).sort_index()).reset_index()
+        na_list = df_mis[df_mis[0]==0][by_col].tolist()
+        df = df[~df[by_col].isin(na_list)]
+
         gr = df.groupby(by_col)
-        return gr.apply(lambda x: np.average(x[data_col].dropna(), weights=x[~x[data_col].isnull()][weight_col]))
+        col_hist_mean = gr.apply(lambda x: np.average(x[data_col].dropna(), weights=x[~x[data_col].isnull()][weight_col]))
+        merged_table = pd.merge(origin_values.rename('s1'), col_hist_mean.rename(0), left_index=True, right_index=True, how='outer').drop(columns=['s1'])
+        col_hist_mean = merged_table[0]
+
+        return col_hist_mean
         
     def weighted_median_group(
         self, 
@@ -688,9 +700,21 @@ class clustering_report:
         weight_col,
         by_col
         ):
+
+        # Drop the rows that the group has only missing values
+        df_origin = df.copy()
+        origin_values = df_origin[by_col].value_counts().sort_index()
+        
+        df_mis = pd.DataFrame(df[by_col].value_counts().sort_index() - df.groupby(by_col).apply(lambda g: g[data_col].isna().sum()).sort_index()).reset_index()
+        na_list = df_mis[df_mis[0]==0][by_col].tolist()
+        df = df[~df[by_col].isin(na_list)]
         
         gr = df.groupby(by_col)
-        return gr.apply(lambda x: wghtd.median(x[data_col].dropna(), x[~x[data_col].isnull()][weight_col]))
+        col_hist_median = gr.apply(lambda x: wghtd.median(x[data_col].dropna(), x[~x[data_col].isnull()][weight_col]))
+        merged_table = pd.merge(origin_values.rename('s1'), col_hist_median.rename(0), left_index=True, right_index=True, how='outer').drop(columns=['s1'])
+        col_hist_median = merged_table[0]
+        
+        return col_hist_median
         
     def CountFrequency(
         self, 
@@ -727,7 +751,8 @@ class clustering_report:
     @time_function
     def numeric_summary_statistics(
         self, 
-        variable_list 
+        variable_list, 
+        feature_importance_file_name
         ):
         
         # Ensure that the graph folder exists
@@ -736,7 +761,6 @@ class clustering_report:
             
         df_stats = pd.DataFrame()
         for var in variable_list:
-        
             # Ensure that the graph folder exists
             if not os.path.isdir('{0}/output/graphs/{1}'.format(self.data_path, var)):
                 os.makedirs('{0}/output/graphs/{1}'.format(self.data_path, var))
@@ -746,7 +770,7 @@ class clustering_report:
             Y1_overlay = col_hist_mean.tolist()
             X1_overlay = col_hist_mean.index.tolist()
             Y2_overlay = [np.average(self.input_data[var].dropna(), weights=self.input_data[~self.input_data[var].isnull()][self.weight_variable_name])]*len(self.input_data[self.cluster_variable_name].value_counts())
-            
+
             plt.xlabel("Cluster labels")
             plt.ylabel(var)
             plt.bar(X1_overlay, Y1_overlay, color='maroon', width=0.4)
@@ -790,6 +814,11 @@ class clustering_report:
             df_stats = pd.concat([df_stats, df_stats_temp], ignore_index=False)
             
         df_stats = df_stats.reset_index().rename(columns={'index': "Attribute"})
+        
+        # Add feature importance info
+        t2 = pd.read_csv('{0}/output/{1}'.format(self.data_path, feature_importance_file_name))
+        df_stats = pd.merge(df_stats, t2[['Feature', 'overall_feature_importance']], left_on='Attribute', right_on='Feature', how='left').drop(columns=['Feature']).sort_values(by='overall_feature_importance', ascending=False)
+
         df_stats.to_csv('{}/output/summary_statistics_numeric.csv'.format(self.data_path), index=False)
         display(df_stats)
                 
