@@ -290,15 +290,16 @@ def standardize_data(
     if weight_variable == 'None':
         weight_variable = None
 
-    out = {}
+    standardized_data = {}
+    standardized_data_weight = {}
 
     if not weight_variable:
         std = StandardScaler().fit(input_data[training_sample][input_variable_list])
         pickle.dump(std, open(data_path + '/output/' + filename, 'wb'))
         
         for k in input_data.keys():
-            out[k] = pd.DataFrame(std.transform(input_data[k][input_variable_list]))
-            out[k].columns = input_data[k][input_variable_list].columns
+            standardized_data[k] = pd.DataFrame(std.transform(input_data[k][input_variable_list]), index=input_data[k].index)
+            standardized_data[k].columns = input_data[k][input_variable_list].columns
 
     else: 
         df0 = input_data[training_sample][input_variable_list].copy()
@@ -311,21 +312,25 @@ def standardize_data(
         for k in input_data.keys():
             # Standardize samples using training sample's mean & std
             df0_standardized = (df0 - weighted_mean) / weighted_std
-            out[k] = (input_data[k][input_variable_list] - weighted_mean) / weighted_std
+            standardized_data[k] = (input_data[k][input_variable_list] - weighted_mean) / weighted_std
+            standardized_data_weight[k] = input_data[k][weight_variable]
+            standardized_data_weight[k].index = input_data[k].index
         
-    return out
+    return standardized_data, standardized_data_weight
     
 
-class dimension_reduction: 
+class PCA_reduction: 
 
     def __init__(
         self, 
-        dic_of_dfs, 
+        input_data, 
+        input_data_weights, 
         data_path, 
         training_sample
         ):
         
-        self.data = dic_of_dfs
+        self.input_data = input_data
+        self.input_data_weights = input_data_weights
         self.data_path = data_path
         self.training_sample = training_sample
         
@@ -339,8 +344,15 @@ class dimension_reduction:
         if not os.path.isdir('{0}/output/graphs'.format(self.data_path)):
             os.makedirs('{0}/output/graphs'.format(self.data_path))
 
-        num_predictors = self.data[self.training_sample].shape[1]
-        pca = PCA(n_components = num_predictors, svd_solver = solver).fit(self.data[self.training_sample])
+        num_predictors = self.input_data[self.training_sample].shape[1]
+        
+        if self.input_data_weights == {}:
+            pca = PCA(n_components = num_predictors, svd_solver = solver).fit(self.input_data[self.training_sample])
+        
+        else: 
+            # Calculate the weighted covariance matrix
+            weighted_cov = np.dot(self.input_data[self.training_sample].T, self.input_data[self.training_sample] * (self.input_data_weights[self.training_sample].values)[:, np.newaxis])
+            pca = PCA(n_components = num_predictors, svd_solver = solver).fit(weighted_cov)
         
         PC_values = np.arange(pca.n_components_) + 1
         
@@ -375,12 +387,39 @@ class dimension_reduction:
         out = {}
         
         # Make PCA object to transform data
-        pca = PCA(n_components = pca_components, svd_solver = solver).fit(self.data[self.training_sample])
-        
-        pickle.dump(pca, open(self.data_path + '/output/' + filename, 'wb'))
-        
-        # loop through data 
-        for k in self.data.keys(): 
-            out[k] = pd.DataFrame(pca.transform(self.data[k]))
+        if self.input_data_weights == {}:
+            pca = PCA(n_components = pca_components, svd_solver = solver).fit(self.input_data[self.training_sample])
             
+            # loop through data 
+            for k in self.input_data.keys(): 
+    #            out[k] = pd.DataFrame(pca.transform(self.input_data[k]))
+                pca_data = pca.transform(self.input_data[k])
+                out[k] = pd.DataFrame(pca_data, index=self.input_data[k].index) 
+            
+            pickle.dump(pca, open(self.data_path + '/output/' + filename, 'wb'))
+        
+        else: 
+            # Calculate the weighted covariance matrix
+            weighted_cov = np.dot(self.input_data[self.training_sample].T, self.input_data[self.training_sample] * (self.input_data_weights[self.training_sample].values)[:, np.newaxis])
+#            pca = PCA(n_components = pca_components, svd_solver = solver).fit(weighted_cov)            
+
+            # Compute eigenvalues and eigenvectors
+            eigenvalues, eigenvectors = np.linalg.eigh(weighted_cov)
+
+            # Sort eigenvalues in descending order and get the corresponding eigenvectors
+            sorted_indices = np.argsort(eigenvalues)[::-1]
+            eigenvalues_sorted = eigenvalues[sorted_indices]
+            eigenvectors_sorted = eigenvectors[:, sorted_indices]
+
+            # Choose the principal components we want to keep
+            principal_components = eigenvectors_sorted[:,:pca_components]
+
+            # loop through data 
+            for k in self.input_data.keys(): 
+                # Project the data onto the principal components
+    #            out[k] = pd.DataFrame(pca.transform(self.input_data[k]))
+#                pca_data = pca.transform(self.input_data[k])
+#                out[k] = pd.DataFrame(pca_data, index=self.input_data[k].index) 
+                out[k] = pd.DataFrame(np.dot(self.input_data[k], principal_components), index=self.input_data[k].index)
+
         return out
