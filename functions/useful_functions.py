@@ -1,4 +1,4 @@
-
+import os 
 
 class color:
     PURPLE = '\u001b[0;35m'
@@ -26,6 +26,14 @@ def identify_numeric_variables(
     ): 
     
     return input_data.columns[input_data.dtypes != object]
+    
+def create_folder(
+    data_path, 
+    folder_name
+    ):
+        
+    if not os.path.isdir('{0}/{1}'.format(data_path, folder_name)):
+        os.makedirs('{0}/{1}'.format(data_path, folder_name))
 
 ###################################################################################################################################
 ###################################################################################################################################

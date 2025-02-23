@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 import time
 import os 
-from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity, calculate_kmo, FactorAnalyzer
+import sys
+if os.path.basename(os.path.dirname(sys.executable)) == 'Unsupervised_Modeling': 
+    from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity, calculate_kmo, FactorAnalyzer
 from matplotlib import pyplot as plt
 import json
 

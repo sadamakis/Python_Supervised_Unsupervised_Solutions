@@ -635,7 +635,7 @@ def auc_precision_recall(
     model_pr_auc = auc(model_recall, model_precision)
     return(model_pr_auc)
 
-
+# COPIED
 def plot_cross_validation_score(model # Name of cross-validation model
                                ):
 

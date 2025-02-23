@@ -11,7 +11,6 @@ from sklearn.ensemble import RandomForestClassifier
 import os 
 import weighted as wghtd
 
-
 import useful_functions as ufun
 
 
@@ -98,6 +97,7 @@ class binary_regression_report():
         amount_variable_name, 
         weight_variable_name, 
         sample_values_dict, 
+        select_top_percent, 
         n_bands, 
         rows, 
         data_path        
@@ -119,6 +119,8 @@ class binary_regression_report():
                         Name of the sample weight variable
         sample_values_dict: dictionary
                         Sample values
+        select_top_percent: Integer
+                        Takes values 0-100. Rank orders the dataframe by descending order according to the score, and keeps the top select_top_percent% to produce the statistics
         n_bands: int 
                         Number of bands to separate
         rows: int
@@ -137,6 +139,7 @@ class binary_regression_report():
         self.amount_variable_name = amount_variable_name
         self.weight_variable_name = weight_variable_name
         self.sample_values_dict = sample_values_dict
+        self.select_top_percent = select_top_percent
         self.n_bands = n_bands
         self.rows = rows
         self.data_path = data_path
@@ -144,7 +147,8 @@ class binary_regression_report():
     @time_function
     def get_evaluation(
         self, 
-        predicted_score_binary
+        predicted_score_binary, 
+        filename
         ):
         
         if self.weight_variable_name == 'None':
@@ -155,7 +159,8 @@ class binary_regression_report():
         FP = []
         TN = []
         FN = []
-        auc = []
+        roc_auc = []
+        pr_auc = []
         logloss = []
         accuracies = []
         precisions = []
@@ -164,7 +169,14 @@ class binary_regression_report():
         for i, j in self.sample_values_dict.items():
             dataset.append(i)
             
-            df = self.predictions_dictionary['data_{}'.format(i)]
+            ts = self.predictions_dictionary['data_{}'.format(i)].sort_values(by=self.predicted_score_numeric, ascending=False)
+            arr = ts[self.weight_variable_name]
+            cum_arr = arr.cumsum() / arr.sum()
+            idx = np.searchsorted(cum_arr, self.select_top_percent/100)
+            ts = ts[0:idx]
+            
+#            df = self.predictions_dictionary['data_{}'.format(i)]
+            df = ts.copy()
             Y = df[self.target_variable]
             if not self.weight_variable_name:
                 weight_var = None
@@ -174,8 +186,12 @@ class binary_regression_report():
             y_0 = df[predicted_score_binary]
             
             cm = confusion_matrix(Y, y_0, sample_weight=weight_var)
-            auc.append(roc_auc_score(Y, y_hat, sample_weight=weight_var))
-            logloss.append(log_loss(y_true=Y, y_pred=y_hat, sample_weight=weight_var, normalize=False))
+            roc_auc.append(roc_auc_score(Y, y_hat, sample_weight=weight_var))
+            # predict class values
+            model_precision, model_recall, _ = precision_recall_curve(Y, y_hat, sample_weight=weight_var)
+            # calculate precision-recall AUC
+            pr_auc.append(auc(model_recall, model_precision))
+            logloss.append(log_loss(y_true=Y, y_pred=y_hat, sample_weight=weight_var, normalize=True))
             accuracies.append(accuracy_score(Y, y_0, sample_weight=weight_var))
             precisions.append(precision_score(Y, y_0, sample_weight=weight_var))
             recalls.append(recall_score(Y, y_0, sample_weight=weight_var))
@@ -185,7 +201,8 @@ class binary_regression_report():
             TN.append(cm[1][1])
             FN.append(cm[1][0])
         eval_df = pd.DataFrame(dataset)
-        eval_df['AUC'] = [round(elem, 4) for elem in auc]
+        eval_df['ROC AUC (balanced)'] = [round(elem, 4) for elem in roc_auc]
+        eval_df['Precision/Recall AUC (imbalanced)'] = [round(elem, 4) for elem in pr_auc]
         eval_df['Log Loss'] = [round(elem, 4) for elem in logloss]
         eval_df['Accuracy'] = [round(elem, 4) for elem in accuracies]
         eval_df['Precision'] = [round(elem, 4) for elem in precisions]
@@ -196,7 +213,7 @@ class binary_regression_report():
         eval_df['False Positives'] = [round(elem, 0) for elem in FP]
         eval_df['False Negatives'] = [round(elem, 0) for elem in FN]
         eval_df.rename(columns = {0: 'dataset'}, inplace = True)
-        eval_df.to_csv(self.data_path + '/output/evaluation_metrics.csv', index=False)
+        eval_df.to_csv(self.data_path + '/output/' + filename, index=False)
         display(eval_df)
 
 
@@ -274,7 +291,8 @@ class binary_regression_report():
         return pd.concat([unit_caprate, value_caprate], axis=1)
 
     def create_lift_table(
-        self
+        self, 
+        filename
         ):
         
         self.lift_table_dict = {} 
@@ -284,13 +302,14 @@ class binary_regression_report():
             lift_table = self.lift_table_weight(self.predictions_dictionary['data_{}'.format(i)]).round(decimals=3)
             self.lift_table_dict['data_{}'.format(i)] = lift_table
             display(lift_table)
-            lift_table.to_csv(self.data_path + '/output/lift_table_' + str(i) + '.csv', index=False)
+            lift_table.to_csv(self.data_path + '/output/' + filename + str(i) + '.csv', index=False)
             
         return self.lift_table_dict
 
     @time_function
     def plot_ADR_Quantile(
         self, 
+        folder_name,
         xlim=None, 
         ylim=None
         ):
@@ -310,12 +329,13 @@ class binary_regression_report():
                 ax.set_ylim(ylim)
             ax.legend(loc="center right", fontsize="x-small")
             plt.tight_layout()
-            plt.savefig('{0}/output/graphs/ADR_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/ADR_{2}.png'.format(self.data_path, folder_name, i))
             plt.show()
 
     @time_function
     def plot_cADR_Quantile(
         self, 
+        folder_name,
         xlim=None, 
         ylim=None
         ):
@@ -335,12 +355,13 @@ class binary_regression_report():
                 ax.set_ylim(ylim)
             ax.legend(loc="center right", fontsize="x-small")
             plt.tight_layout()
-            plt.savefig('{0}/output/graphs/cADR_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/cADR_{2}.png'.format(self.data_path, folder_name, i))
             plt.show()
             
     @time_function
     def plot_FPR_Quantile(
         self, 
+        folder_name,
         xlim=None, 
         ylim=None
         ):
@@ -359,12 +380,13 @@ class binary_regression_report():
                 ax.set_ylim(ylim)
             ax.legend(loc="center right", fontsize="x-small")
             plt.tight_layout()
-            plt.savefig('{0}/output/graphs/FPR_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/FPR_{2}.png'.format(self.data_path, folder_name, i))
             plt.show()
 
     @time_function
     def plot_cFPR_Quantile(
         self, 
+        folder_name,
         xlim=None, 
         ylim=None
         ):
@@ -383,40 +405,38 @@ class binary_regression_report():
                 ax.set_ylim(ylim)
             ax.legend(loc="center right", fontsize="x-small")
             plt.tight_layout()
-            plt.savefig('{0}/output/graphs/cFPR_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/cFPR_{2}.png'.format(self.data_path, folder_name, i))
             plt.show()
 
     @time_function
     def plot_ROC_curve(
         self, 
-        target_variable, # Target variable name
-        predicted_variable, # Predicted variable name
-        weight_variable_name # Weight variable name
+        folder_name
         ): 
             
-        if weight_variable_name == 'None':
-            weight_variable_name = None
+        if self.weight_variable_name == 'None':
+            self.weight_variable_name = None
         
         for i, j in self.sample_values_dict.items():
             print(ufun.color.BOLD + ufun.color.PURPLE + ufun.color.UNDERLINE + 'SAMPLE ' + i + ufun.color.END)
             table_name = self.predictions_dictionary['data_{}'.format(i)]
             
-            if not weight_variable_name:
+            if not self.weight_variable_name:
                 weight_variable = None
             else: 
-                weight_variable = table_name[weight_variable_name]
+                weight_variable = table_name[self.weight_variable_name]
             
             # generate a no skill prediction (majority class)
-            ns_probs = [0 for _ in range(len(table_name[target_variable].values))]
+            ns_probs = [0 for _ in range(len(table_name[self.target_variable].values))]
             # calculate scores
-            ns_auc = roc_auc_score(table_name[target_variable].values, ns_probs, sample_weight=weight_variable)
-            model_auc = roc_auc_score(table_name[target_variable].values, table_name[predicted_variable].values, sample_weight=weight_variable)
+            ns_auc = roc_auc_score(table_name[self.target_variable].values, ns_probs, sample_weight=weight_variable)
+            model_auc = roc_auc_score(table_name[self.target_variable].values, table_name[self.predicted_score_numeric].values, sample_weight=weight_variable)
             # summarize scores
             print('Random: ROC AUC=%.4f' % (ns_auc))
             print('Model: ROC AUC=%.4f' % (model_auc))
             # calculate roc curves
-            ns_fpr, ns_tpr, _ = roc_curve(table_name[target_variable].values, ns_probs, sample_weight=weight_variable)
-            model_fpr, model_tpr, _ = roc_curve(table_name[target_variable].values, table_name[predicted_variable].values, sample_weight=weight_variable)
+            ns_fpr, ns_tpr, _ = roc_curve(table_name[self.target_variable].values, ns_probs, sample_weight=weight_variable)
+            model_fpr, model_tpr, _ = roc_curve(table_name[self.target_variable].values, table_name[self.predicted_score_numeric].values, sample_weight=weight_variable)
             # plot the roc curve for the model
             plt.plot(ns_fpr, ns_tpr, linestyle='--', label='Random')
             plt.plot(model_fpr, model_tpr, marker='.', label='Model')
@@ -426,37 +446,35 @@ class binary_regression_report():
             # show the legend
             plt.legend()
             # save the graph
-            plt.savefig('{0}/output/graphs/ROC_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/ROC_{2}.png'.format(self.data_path, folder_name, i))
             # show the plot
             plt.show()
             
     @time_function
     def plot_precision_recall_curve(
         self, 
-        target_variable, # Target variable name
-        predicted_variable, # Predicted variable name
-        weight_variable_name # Weight variable name
+        folder_name
         ):
         
-        if weight_variable_name == 'None':
-            weight_variable_name = None
+        if self.weight_variable_name == 'None':
+            self.weight_variable_name = None
             
         for i, j in self.sample_values_dict.items():
             print(ufun.color.BOLD + ufun.color.PURPLE + ufun.color.UNDERLINE + 'SAMPLE ' + i + ufun.color.END)
             table_name = self.predictions_dictionary['data_{}'.format(i)]
             
-            if not weight_variable_name:
+            if not self.weight_variable_name:
                 weight_variable = None
             else: 
-                weight_variable = table_name[weight_variable_name]
+                weight_variable = table_name[self.weight_variable_name]
                 
             # predict class values
-            model_precision, model_recall, _ = precision_recall_curve(table_name[target_variable].values, table_name[predicted_variable].values, sample_weight=weight_variable)
+            model_precision, model_recall, _ = precision_recall_curve(table_name[self.target_variable].values, table_name[self.predicted_score_numeric].values, sample_weight=weight_variable)
             # plot the precision-recall curves
-            if not weight_variable_name:
-                no_skill = table_name[target_variable].values.sum() / len(table_name)
+            if not self.weight_variable_name:
+                no_skill = table_name[self.target_variable].values.sum() / len(table_name)
             else: 
-                no_skill = weight_variable.values[table_name[target_variable].values==1].sum() / weight_variable.values.sum()
+                no_skill = weight_variable.values[table_name[self.target_variable].values==1].sum() / weight_variable.values.sum()
             plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='Random')
             plt.plot(model_recall, model_precision, marker='.', label='Model')
             # axis labels
@@ -465,31 +483,29 @@ class binary_regression_report():
             # show the legend
             plt.legend()
             # save the graph
-            plt.savefig('{0}/output/graphs/precision_recall_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/precision_recall_{2}.png'.format(self.data_path, folder_name, i))
             # show the plot
             plt.show()
 
     @time_function
     def plot_cutoffs(
         self, 
-        target_variable, # Target variable name
-        predicted_variable, # Predicted variable name
-        weight_variable_name, # Weight variable name
+        folder_name,
         n_bands, # Number of bands between 0 and 1
         return_table=False # Set to True in order to return the table that produced the graph, otherwise set to False
         ):
      
-        if weight_variable_name == 'None':
-            weight_variable_name = None
+        if self.weight_variable_name == 'None':
+            self.weight_variable_name = None
             
         for i, j in self.sample_values_dict.items():
             print(ufun.color.BOLD + ufun.color.PURPLE + ufun.color.UNDERLINE + 'SAMPLE ' + i + ufun.color.END)
             table_name = self.predictions_dictionary['data_{}'.format(i)]
             
-            if not weight_variable_name:
+            if not self.weight_variable_name:
                 weight_variable = None
             else: 
-                weight_variable = table_name[weight_variable_name]
+                weight_variable = table_name[self.weight_variable_name]
 
             threshold_array = np.linspace(0,1,n_bands+1, endpoint=False)
 #            column_names = ['cutoff', 'f1', 'accuracy', 'sensitivity/recall', 'specificity', 'precision']
@@ -498,8 +514,8 @@ class binary_regression_report():
             dataframes = []
 
             for threshold in threshold_array: 
-                y_hat = (table_name[predicted_variable].values >= threshold)*1
-                cm = confusion_matrix(table_name[target_variable].values, y_hat, sample_weight=weight_variable)
+                y_hat = (table_name[self.predicted_score_numeric].values >= threshold)*1
+                cm = confusion_matrix(table_name[self.target_variable].values, y_hat, sample_weight=weight_variable)
 
                 true_positive = cm[1,1]
                 false_positive = cm[0,1]
@@ -535,7 +551,7 @@ class binary_regression_report():
             # show the legend
             plt.legend()
             # save the graph
-            plt.savefig('{0}/output/graphs/metrics_{1}.png'.format(self.data_path, i))
+            plt.savefig('{0}/output/{1}/metrics_{2}.png'.format(self.data_path, folder_name, i))
             # show the plot
             plt.show()
             
@@ -867,6 +883,25 @@ class clustering_report:
 #############################################################################################################################################
 #############################################################################################################################################
 
+def plot_cross_validation_score(model # Name of cross-validation model
+                               ):
+
+    score_list = []
+    for i in [col for col in model.cv_results_.keys() if col.startswith('split')]:
+        score_list.append(-model.cv_results_[i][model.best_index_])
+    no_lists = [*range(1,len(score_list)+1)]
+
+    plt.bar(no_lists, score_list)
+    # horizontal line indicating the threshold
+    mean_score = -model.cv_results_['mean_test_score'][model.best_index_]
+    std_score = -model.cv_results_['std_test_score'][model.best_index_]
+    plt.plot([no_lists[0],no_lists[-1]], [mean_score, mean_score], "k--")
+    plt.xlabel('Training instances', fontsize=15)
+    plt.ylabel('Score', fontsize=15)
+    plt.title('Cross-validation scores for classifier', fontsize=15)
+    plt.legend(['Mean score = {}'.format(mean_score.round(decimals=5))], fancybox=True, loc='best', fontsize=10)
+    plt.annotate('St.D. score = {}'.format(std_score.round(decimals=5)), xy=(1,max(score_list)), size=10)
+    plt.show()
 
 
 

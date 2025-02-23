@@ -1,0 +1,27 @@
+Follow these instructions to install all the dependencies for the Supervised Modeling solution:
+
+METHOD 1 - Using an existing yml file
+After cloning the Sotiris_Solutions repository, run the following commands in your putty command prompt: 
+1. cd 2_Supervised_Modeling/Machine_Learning/environment_setup
+2. conda env create -f Supervised_Modeling_ML_env.yml -n Supervised_Modeling_ML
+3. conda activate Supervised_Modeling_ML
+4. conda install ipykernel
+5. python -m ipykernel install --user --name Supervised_Modeling_ML --display-name "Supervised Modeling Solution ML"
+
+METHOD 2 - Install all libraries from scratch 
+After cloning the Sotiris_Solutions repository, run the following commands in your putty command prompt: 
+1. cd 2_Supervised_Modeling/Machine_Learning/environment_setup
+2. conda create --name Supervised_Modeling_ML python=3.10
+3. conda activate Supervised_Modeling_ML
+4. conda config --env --add channels conda-forge
+5. conda config --show channels
+
+6. conda install pandas scikit-learn=1.2.2 statsmodels matplotlib seaborn wquantiles ipykernel lightgbm keras tensorflow eli5 optuna ipywidgets plotly polars pyarrow 
+7. pip install -f http://h2o-release.s3.amazonaws.com/h2o/latest_stable_Py.html h2o
+8. pip install autokeras
+
+9. python -m ipykernel install --user --name Supervised_Modeling_ML --display-name "Supervised Modeling Solution ML"
+
+10. C:\Users\creep\miniconda3\envs\Supervised_Modeling_ML\python.exe -m pip install --upgrade pip
+
+11. conda env export > Supervised_Modeling_ML_env.yml

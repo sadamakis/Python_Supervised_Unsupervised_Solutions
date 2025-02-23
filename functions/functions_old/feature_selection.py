@@ -183,6 +183,7 @@ class SelectBest(object):
                                                     keep.remove(remove_feat)
                     return keep
 
+# COPIED
 class SelectBest_weight(object):
     def __init__(self, df, target, weight):
                     
