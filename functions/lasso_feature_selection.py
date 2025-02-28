@@ -12,7 +12,7 @@ from decorators import time_function
 class lasso_selection():
     
     def __init__(
-        self, curr_dataset, train, valid, data, target_variable_name, predictor_variables, data_path, standardization=True, early_stop=True, weight_variable_name=None, c_min=1e-4, c_max=1e4, num=20, vif_threshold=5, random_state=42, solver='saga'
+        self, curr_dataset, train, valid, data, target_variable_name, predictor_variables, data_path, standardization=True, early_stop=True, weight_variable_name=None, c_min=1e-4, c_max=1e4, num=20, vif_threshold=5, random_state=42, solver='saga', lasso_criterion='BIC'
         ):
         
         self.predictor_variables = predictor_variables
@@ -41,6 +41,7 @@ class lasso_selection():
         self.cs = np.linspace(c_min, c_max, num=num)
         self.random_state = random_state
         self.solver = solver
+        self.lasso_criterion = lasso_criterion
         self.bic_dict = {"C": [], 
                         "BIC": [],
                         "AIC": [], 
@@ -136,8 +137,8 @@ class lasso_selection():
             self.lrs.append((C, lr))
             count += 1
             
-            if self.early_stop and i >= 3:
-                if self.bic_dict["BIC"][i-3] < min(self.bic_dict["BIC"][i-2:]): 
+            if self.early_stop and i >= 5:
+                if self.bic_dict[self.lasso_criterion][i-5] < min(self.bic_dict[self.lasso_criterion][i-4:]): 
                     break 
                     
         print("{0}/{1} models trained".format(count, len(self.cs)))
