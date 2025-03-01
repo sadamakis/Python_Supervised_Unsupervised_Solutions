@@ -14,5 +14,6 @@ functions/__pycache__/*
 2_Supervised_Modeling/Logistic_Regression/data/output/*
 2_Supervised_Modeling/Machine_Learning/data/output/*
 3_Unsupervised_Modeling/data/output/*
+pytest/data/output
 
 2_Supervised_Modeling/to_delete/*
