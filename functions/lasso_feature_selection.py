@@ -182,21 +182,18 @@ class lasso_selection():
             return self.lrs
         
     def get_min_C(
-        self, 
-        criterion
+        self
         ):
     
-        min_C = self.bic_df.loc[self.bic_df[criterion] == self.bic_df[criterion].min(), 'C'].values[0]
+        min_C = self.bic_df.loc[self.bic_df[self.lasso_criterion] == self.bic_df[self.lasso_criterion].min(), 'C'].values[0]
         min_C_index = np.where(self.cs == min_C)[0][0]
         return min_C, min_C_index
     
     def best_vars(
-        self, 
-        criterion
+        self
         ):
         
-        self.min_C, self.min_C_index = self.get_min_C(criterion)
-        self.criterion = criterion
+        self.min_C, self.min_C_index = self.get_min_C()
         for tup in self.lrs:
             if tup[0] == self.min_C:
                 coefs = tup[1].coef_
@@ -218,7 +215,7 @@ class lasso_selection():
         if len(features) <= 1:
             print("<=1 Remaining Features, VIF cannot be calculated")
             self.vifs = pd.DataFrame(data=[0], columns=['Variance Inflation Factor'], index=features)
-            self.vifs.to_csv('{0}/output/variance_inflation_factor_{1}.csv'.format(self.data_path, self.criterion, index_label='Variable'))
+            self.vifs.to_csv('{0}/output/variance_inflation_factor_{1}.csv'.format(self.data_path, self.lasso_criterion, index_label='Variable'))
             return self.vifs
             
         weight_vector = self.train_df[weight_variable_name].values 
@@ -233,7 +230,7 @@ class lasso_selection():
         self.vifs = pd.DataFrame(self.vifs_dict, index=['Variance Inflation Factor']).T.sort_values('Variance Inflation Factor', ascending=False)
         if not silent:
             display(self.vifs)
-            self.vifs.to_csv('{0}/output/variance_inflation_factor_{1}.csv'.format(self.data_path, self.criterion, index_label='Variable'))
+            self.vifs.to_csv('{0}/output/variance_inflation_factor_{1}.csv'.format(self.data_path, self.lasso_criterion, index_label='Variable'))
             
         return self.vifs
 
@@ -267,7 +264,7 @@ class lasso_selection():
         
             self.final_predictors = np.array(remaining_predictors)
             
-        pd.DataFrame(self.final_predictors, columns=['final_features']).to_csv('{0}/output/final_features_{1}.csv'.format(self.data_path, self.criterion), index=False)
+        pd.DataFrame(self.final_predictors, columns=['final_features']).to_csv('{0}/output/final_features_{1}.csv'.format(self.data_path, self.lasso_criterion), index=False)
         return self.final_predictors
             
 

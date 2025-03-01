@@ -83,6 +83,8 @@ def dq_report(
     data_quality_df['Missing Value Percentage'] = data_quality_df['Missing Value Percentage'].apply(lambda x: f"{x:.2f}%")
     data_quality_df.to_csv('{0}/output/{1}'.format(data_path, dq_report_file))
     display(data_quality_df)
+    
+    return data_quality_df
 
 #############################################################################################################################################
 #############################################################################################################################################
@@ -510,7 +512,7 @@ class binary_regression_report():
             threshold_array = np.linspace(0,1,n_bands+1, endpoint=False)
 #            column_names = ['cutoff', 'f1', 'accuracy', 'sensitivity/recall', 'specificity', 'precision']
 #            df = pd.DataFrame(columns = column_names)
-            df_empty = pd.DataFrame(columns=['cutoff', 'f1', 'accuracy', 'sensitivity/recall', 'specificity', 'precision'])
+            df_empty = pd.DataFrame(columns=['cutoff', 'f1', 'accuracy', 'sensitivity/recall', 'specificity', 'precision'], dtype='float64')
             dataframes = []
 
             for threshold in threshold_array: 

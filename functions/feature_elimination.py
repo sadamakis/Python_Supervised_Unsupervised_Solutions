@@ -282,7 +282,8 @@ def perform_lasso(
     c_max=1e4, 
     num=20, 
     vif_threshold=5, 
-    random_state=42
+    random_state=42, 
+    lasso_criterion='BIC'
     ):
     
     for i in range(len(sample_values_dict)): 
@@ -300,6 +301,7 @@ def perform_lasso(
             target_variable_name=target_variable_name, 
             predictor_variables=predictor_variables, 
             standardization=standardization, 
+            early_stop=early_stop,
             weight_variable_name=weight_variable_name, 
             c_min=c_min,
             c_max=c_max, 
@@ -307,7 +309,8 @@ def perform_lasso(
             vif_threshold=vif_threshold, 
             random_state=random_state, 
             solver= LogisticRegression_solver,
-            data_path=data_path            
+            data_path=data_path, 
+            lasso_criterion=lasso_criterion
             )
             
         bic_df = lasso.fit()

@@ -124,12 +124,13 @@ def character_var_levels(
     char_classification_df = pd.DataFrame.from_dict(char_classification, orient='index').T
     char_classification_df.to_csv('{}/output/character_classification_results.csv'.format(data_path))
     
-    keep_char_vars_levels = [x for x in keep_char_vars if x not in (char_classification['single'] + char_classification['large'])]
+    excl_char_vars = char_classification['single'] + char_classification['large']
+    keep_char_vars_levels = [x for x in keep_char_vars if x not in excl_char_vars]
     print() 
     print(ufun.color.PURPLE + 'Character variables kept: ' + ufun.color.END + str(keep_char_vars_levels))
     print() 
     
-    return keep_char_vars_levels
+    return keep_char_vars_levels, excl_char_vars
 
 @time_function
 def keep_num_variables_one_value(

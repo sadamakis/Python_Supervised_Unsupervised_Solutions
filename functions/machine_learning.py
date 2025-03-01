@@ -101,6 +101,237 @@ class logistic_regression():
         
         return self.pred_dict
     
+    def forward_stepwise(
+                        self, 
+                        sample_values, 
+                        number_of_features = None, 
+                        significance_level=0.05):
+
+        i = sample_values[0]
+        df = self.input_data['data_{}'.format(i)]
+        X = sm.add_constant(df[self.final_feats])
+        y = df[self.target_variable]
+        selected_vars = []
+        remaining_vars = self.final_feats.tolist()
+
+        if not number_of_features:
+            while len(remaining_vars) > 0:
+                scores = []
+                
+                for candidate in remaining_vars:
+                    model = sm.GLM(y, X[selected_vars + [candidate] + ['const']], family=sm.families.Binomial(), freq_weights=df[self.weight_variable_name]).fit()
+                    p_values = model.pvalues.drop('const')  # Ignore intercept
+                    p_value = p_values[candidate]
+                    scores.append((p_value, candidate))
+               
+                # Select the feature with the lowest p-value
+                scores.sort()
+                best_pval, best_feature = scores[0]
+        
+                if best_pval < significance_level:
+                    selected_vars.append(best_feature)
+                    remaining_vars.remove(best_feature)
+                    print(best_feature, ' added to the model with p-value ', round(best_pval, 4))
+                else:
+                    break  # Stop if no feature is significant
+
+        else:
+            while len(selected_vars) < number_of_features:
+                scores = []
+                
+                for candidate in remaining_vars:
+                    model = sm.GLM(y, X[selected_vars + [candidate] + ['const']], family=sm.families.Binomial(), freq_weights=df[self.weight_variable_name]).fit()
+                    p_values = model.pvalues.drop('const')  # Ignore intercept
+                    p_value = p_values[candidate]
+                    scores.append((p_value, candidate))
+        
+                # Select the feature with the lowest p-value
+                scores.sort()
+                best_pval, best_feature = scores[0]
+        
+                if best_pval < significance_level:
+                    selected_vars.append(best_feature)
+                    remaining_vars.remove(best_feature)
+                    print(best_feature, ' added to the model with p-value ', round(best_pval, 4))
+                else:
+                    break  # Stop if no feature is significant    
+        
+        return selected_vars
+        
+    def backward_stepwise(
+                        self, 
+                        sample_values, 
+                        number_of_features = None, 
+                        significance_level=0.05):
+        
+        i = sample_values[0]
+        df = self.input_data['data_{}'.format(i)]
+        X = sm.add_constant(df[self.final_feats])
+        y = df[self.target_variable]
+        selected_vars = self.final_feats.tolist()
+
+        if not number_of_features:
+            while len(selected_vars) > 0:
+                model = sm.GLM(y, X[selected_vars + ['const']], family=sm.families.Binomial(), freq_weights=df[self.weight_variable_name]).fit()
+                p_values = model.pvalues.drop('const')  # Ignore intercept
+                
+                worst_pval = p_values.max()
+                if worst_pval > significance_level:
+                    worst_feature = p_values.idxmax()
+                    selected_vars.remove(worst_feature)
+                    print(worst_feature, ' removed with p-value: ', round(worst_pval, 4))
+                else:
+                    break  # Stop if all variables are significant
+            
+        else: 
+            while len(selected_vars) > number_of_features:
+                model = sm.GLM(y, X[selected_vars + ['const']], family=sm.families.Binomial(), freq_weights=df[self.weight_variable_name]).fit()
+                p_values = model.pvalues.drop('const')  # Ignore intercept
+                
+                worst_pval = p_values.max()
+                if worst_pval > significance_level:
+                    worst_feature = p_values.idxmax()
+                    selected_vars.remove(worst_feature)
+                    print(worst_feature, ' removed with p-value: ', round(worst_pval, 4))
+                else:
+                    break  # Stop if all variables are significant
+
+        return selected_vars    
+        
+    def combined_stepwise(
+            self, 
+            sample_values, 
+            number_of_features=None, 
+            significance_level=0.05
+            ):
+        
+        i = sample_values[0]
+        df = self.input_data['data_{}'.format(i)]
+        X = sm.add_constant(df[self.final_feats])
+        y = df[self.target_variable]
+        selected_vars = []
+        remaining_vars = self.final_feats.tolist()
+        
+        if not number_of_features:
+            while remaining_vars:  # Ensure loop stops if no more variables can be added
+                changed = False
+
+                # Forward Step: Try adding the best feature
+                scores = []
+                for candidate in remaining_vars:
+                    model = sm.GLM(y, X[selected_vars + [candidate] + ['const']], 
+                                   family=sm.families.Binomial(), 
+                                   freq_weights=df[self.weight_variable_name]).fit()
+                    
+                    p_value = model.pvalues[candidate]
+                    scores.append((p_value, candidate))
+                
+                scores.sort()
+                if scores and scores[0][0] < significance_level:
+                    best_pval, best_feature = scores[0]
+                    selected_vars.append(best_feature)
+                    remaining_vars.remove(best_feature)
+                    print(best_feature, ' added to the model with p-value ', round(best_pval, 4))
+                    changed = True
+                
+                # Backward Step: Remove worst feature
+                if selected_vars:
+                    model = sm.GLM(y, X[selected_vars + ['const']], 
+                                   family=sm.families.Binomial(), 
+                                   freq_weights=df[self.weight_variable_name]).fit()
+                    
+                    p_values = model.pvalues[selected_vars]
+                    worst_pval = p_values.max()
+                    
+                    if worst_pval > significance_level:
+                        worst_feature = p_values.idxmax()
+                        selected_vars.remove(worst_feature)
+                        remaining_vars.append(worst_feature)
+                        print(worst_feature, ' removed with p-value: ', round(worst_pval, 4))
+                        changed = True
+                
+                if not changed:
+                    break  # Stop when no changes are made
+        
+        else: 
+            while len(selected_vars) < number_of_features:
+                changed = False
+
+                # Forward Step: Try adding the best feature
+                scores = []
+                for candidate in remaining_vars:
+                    model = sm.GLM(y, X[selected_vars + [candidate] + ['const']], 
+                                   family=sm.families.Binomial(), 
+                                   freq_weights=df[self.weight_variable_name]).fit()
+                    
+                    p_value = model.pvalues[candidate]
+                    scores.append((p_value, candidate))
+            
+                scores.sort()
+                if scores and scores[0][0] < significance_level:
+                    best_pval, best_feature = scores[0]
+                    selected_vars.append(best_feature)
+                    remaining_vars.remove(best_feature)
+                    print(best_feature, ' added to the model with p-value ', round(best_pval, 4))
+                    changed = True
+                
+                # Backward Step: Remove worst feature
+                if selected_vars:
+                    model = sm.GLM(y, X[selected_vars + ['const']], 
+                                   family=sm.families.Binomial(), 
+                                   freq_weights=df[self.weight_variable_name]).fit()
+                    
+                    p_values = model.pvalues[selected_vars]
+                    worst_pval = p_values.max()
+
+                    if worst_pval > significance_level:
+                        worst_feature = p_values.idxmax()
+                        selected_vars.remove(worst_feature)
+                        remaining_vars.append(worst_feature)
+                        print(worst_feature, ' removed with p-value: ', round(worst_pval, 4))
+                        changed = True
+                
+                if not changed:
+                    break  # Stop when no changes are made
+        
+        return selected_vars    
+        
+        
+    @time_function
+    def stepwise_fun(
+        self, 
+        sample_values_solution, 
+        method, # Possible values: 'backward', 'forward', 'combined'
+        number_of_features = None, # Set to None to allow for feature selection using the p-value
+        significance_level = 0.05 # Features with p-value greater than this threshold will not be included in the selected features    
+    ):
+    
+        if method == 'forward': 
+            # Run forward stepwise regression
+            selected_vars = self.forward_stepwise(sample_values = sample_values_solution, 
+                                  number_of_features = number_of_features, 
+                                  significance_level = significance_level)
+            return selected_vars
+                                  
+        elif method == 'backward':
+            # Run backward stepwise regression
+            selected_vars = self.backward_stepwise(sample_values = sample_values_solution, 
+                      number_of_features = number_of_features, 
+                      significance_level = significance_level)
+            return selected_vars
+
+        elif method == 'combined':
+            # Run combined stepwise logistic regression
+            selected_vars = self.combined_stepwise(sample_values = sample_values_solution, 
+                                  number_of_features = number_of_features, 
+                                  significance_level = significance_level)
+            return selected_vars
+
+        else: 
+            print('The method provided is not implemented and the input final_feats will be returned.')
+            return self.final_feats
+    
+    
 #############################################################################################################################################
 #############################################################################################################################################
 

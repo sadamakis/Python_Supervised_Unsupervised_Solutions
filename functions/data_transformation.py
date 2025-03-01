@@ -248,15 +248,17 @@ def replace_outliers(
     outlier_info = outlier_info.sort_values(by='variable', ascending=True)
     outlier_info.to_csv('{0}/output/{1}'.format(data_path, outlier_info_file), header=True, index=False)
     display(outlier_info)
-    return input_data
+    return input_data, outlier_info
 
 @time_function
 def character_to_binary(
     input_data, 
     input_variable_list, 
-    drop, # Specifies which value to drop from the one hot encoder. None will return binary variables for all categories. 'first' will drop the most populated category. 'last' will drop the less populated category. 
+    drop, # Specifies which value to drop from the one hot encoder. None will return binary variables for all categories. 'first' will drop the most populated category. 'last' will drop the least populated category. 
     protected_class_valid_values = None # Specifies accepted values for the protected class column. For non-protected class conversions use 'None'
     ):
+        
+    input_data = input_data.copy()
     
     for x in input_variable_list:
         if drop == 'last':
@@ -276,6 +278,8 @@ def character_to_binary(
                     input_data[x + '_' + str(v).replace(".", "_")] = input_data[x].map(lambda t: 1 if t==v else 0)
                 else: 
                     input_data[x + '_' + str(v).replace(".", "_")] = input_data[x].map(lambda t: 1 if t is v else 0)
+                    
+    return input_data
 
 @time_function
 def standardize_data(
