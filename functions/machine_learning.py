@@ -12,6 +12,7 @@ from sklearn.utils import resample
 
 from decorators import time_function 
 import useful_functions as ufun
+import feature_elimination as fe
 
 class logistic_regression():
     
@@ -75,7 +76,24 @@ class logistic_regression():
         
         for i, j in self.glm_bin_summary.items():
             temp = self.glm_bin_summary[i]
-            temp = temp.drop(['[0.025', '0.975]'], axis=1).round(4)
+            temp = temp.drop(['[0.025', '0.975]'], axis=1)
+            
+            # Add VIFs
+            text = i
+            text = text.replace("log_reg_summary_", "")
+            df = self.input_data['data_{}'.format(text)]
+            feature_list = list(temp['variable'])
+            feature_list.remove('const')
+            glm_vif = fe.calculate_vifs(
+                input_data = df, 
+                features = feature_list, 
+                weight_variable_name = self.weight_variable_name, 
+                silent=True
+                )
+            glm_vif.reset_index(inplace=True)
+            merged_df = temp.merge(glm_vif, left_on='variable', right_on='index', how='left').drop('index', axis=1)
+            temp = merged_df.round(4)
+            
             display(temp)
             pd.DataFrame(temp).to_csv(self.data_path + '/output/' + str(i) + '.csv', index=False)
         return temp
