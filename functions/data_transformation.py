@@ -360,24 +360,51 @@ class PCA_reduction:
         
         PC_values = np.arange(pca.n_components_) + 1
         
+        #The second derivative can be used to identify the 'elbow' of a function. 
+        #If the function is monotonically increasing, then the elbow can be given by the minimum of the central second derivative approximation. 
+        #Central derivative approximation: x[i+1] + x[i-1] - 2*x[i]
+        #If we use the forward second derivative approximation, then there is a lag of 1. This means that the 'elbow' is given by the next point that minimizes the second derivative. 
+        #Forward derivative approximation: x[i+2] + x[i] - 2*x[i+1]
+        #If the function is monotonically decreasing, then the elbow can be given by the maximum of the central second derivative approximation.
+        #We use the central derivative approximation to for the explained variance ratio.
+        stats_dict = {'components': PC_values, 
+                        'explained_variance_ratio': pca.explained_variance_ratio_, 
+                        'explained_variance_ratio_cumsum': pca.explained_variance_ratio_.cumsum()
+                        }
+        # Create a DataFrame from the dictionary
+        criteria_df = pd.DataFrame(stats_dict)
+        criteria_df['explained_variance_ratio_second_der'] = (
+            criteria_df['explained_variance_ratio'].shift(-1) - 2 * criteria_df['explained_variance_ratio'] + criteria_df['explained_variance_ratio'].shift(1)
+            )
+
         # Plot Scree plot and output to graphs folder
-        plt.plot(PC_values, pca.explained_variance_ratio_, 'o-', linewidth=2, color='blue')
+        plt.plot(criteria_df['components'], criteria_df['explained_variance_ratio'], 'o-', linewidth=2, color='blue')
         plt.title('Scree Plot')
         plt.xlabel('Principal Component')
         plt.ylabel('Variance Explained')
         plt.savefig(self.data_path + "/output/graphs/PCA_scree_plot.png")
         plt.show()
+
+        # Plot the second derivative for the Scree plot and output to graphs folder. The elbow can be given by the maximum of the central second derivative approximation.
+        plt.plot(criteria_df['components'], criteria_df['explained_variance_ratio_second_der'], 'o-', linewidth=2, color='blue')
+        plt.title('Scree Plot second derivative')
+        plt.xlabel('Principal Component')
+        plt.ylabel('Variance Explained second derivative')
+        plt.savefig(self.data_path + "/output/graphs/PCA_scree_plot_second_derivative.png")
+        plt.show()
         
         # Plot Cumulative variance plot and output to graphs folder
-        plt.plot(PC_values, pca.explained_variance_ratio_.cumsum(), 'o-', linewidth=2, color='blue')
+        plt.plot(criteria_df['components'], criteria_df['explained_variance_ratio_cumsum'], 'o-', linewidth=2, color='blue')
         plt.title('Cumulative Variance Plot')
         plt.xlabel('Principal Component')
         plt.ylabel('Cumulative Variance Explained')
         plt.savefig(self.data_path + "/output/graphs/PCA_cumulative_variance_plot.png")
         plt.show()
+        
+        display(criteria_df)
 
-        print("Variance explained by each principal component:\n", pca.explained_variance_ratio_)
-        print("Cumulative sum of variance explained by each principal component:\n", pca.explained_variance_ratio_.cumsum())
+#        print("Variance explained by each principal component:\n", pca.explained_variance_ratio_)
+#        print("Cumulative sum of variance explained by each principal component:\n", pca.explained_variance_ratio_.cumsum())
         
         return pca
         
