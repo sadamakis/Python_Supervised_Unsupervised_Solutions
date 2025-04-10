@@ -11,9 +11,12 @@ functions/__pycache__/*
 
 # Ignore files in output folders
 1_Fake_Data_Generation/data/output/*
+!1_Fake_Data_Generation/data/output/.gitignore
 2_Supervised_Modeling/Logistic_Regression/data/output/*
+!2_Supervised_Modeling/Logistic_Regression/data/output/.gitignore
 2_Supervised_Modeling/Machine_Learning/data/output/*
+!2_Supervised_Modeling/Machine_Learning/data/output/.gitignore
 3_Unsupervised_Modeling/data/output/*
+!3_Unsupervised_Modeling/data/output/.gitignore
 pytest/data/output
-
-2_Supervised_Modeling/to_delete/*
+!pytest/data/output/.gitignore
