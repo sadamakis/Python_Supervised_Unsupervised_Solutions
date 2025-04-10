@@ -31,4 +31,8 @@ The repository is organized into logical directories (e.g., '1_Fake_Data_Generat
 
 Contributions, including bug fixes, new implementations, and improvements to existing code, are welcome! Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines.
 
+## License
+
+Your use of the Supervised_Unsupervised_Solutions repository is governed by the terms and conditions outlined in the [LICENSE](LICENSE) file of this repository. By proceeding, you acknowledge and agree to these terms.
+
 **Keywords:** machine learning, supervised learning, unsupervised learning, classification, clustering, dimensionality reduction, Python, scikit-learn, lightGBM, TensorFlow, Keras, Optuna, H2O.
