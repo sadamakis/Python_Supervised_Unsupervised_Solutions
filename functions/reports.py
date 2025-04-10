@@ -244,8 +244,8 @@ class binary_regression_report():
         cumulative_lift = resp_frac / w_resp_frac
         return pd.DataFrame(np.c_[w_resp_frac, w_resp_sum, resp_sum, resp_cum, resp_rate, (1-resp_rate)/(resp_rate + 10e-10), \
                         (1-resp_rate_cum)/(resp_rate_cum+10e-10), resp_adr, resp_frac, lift, cumulative_lift], \
-                        columns = ['Quantile Unit', '# Cases', '# Responses', 'Cumulative # Responses', '% Response', 'FPR', \
-                        'Cumulative FPR', 'ADR', 'Cumulative ADR', 'Lift', 'Cumulative Lift']).head(self.rows)
+                        columns = ['Quantile Unit', '# Cases', '# Responses', 'Cumulative # Responses', '% Response', 'FP to TP ratio', \
+                        'Cumulative FP to TP ratio', 'ADR/TPR', 'Cumulative ADR/TPR', 'Lift (ADR to Quantile Unit)', 'Cumulative Lift']).head(self.rows)
                         
     def _capture_value_weight(
         self, 
@@ -321,7 +321,7 @@ class binary_regression_report():
             lt = self.lift_table_dict['data_{}'.format(i)]
             plt.figure()
             ax = plt.subplot((111))
-            ax.plot(lt['Quantile Unit'], lt['ADR'], "bo", label="Account DR", linestyle='solid')
+            ax.plot(lt['Quantile Unit'], lt['ADR/TPR'], "bo", label="Account DR", linestyle='solid')
             ax.plot(lt['Quantile Value'], lt['VDR'], "r^", label="Value DR", linestyle='dashed')
             ax.set_xlabel('Population Distribution')
             ax.set_ylabel('Detection Rate')
@@ -347,7 +347,7 @@ class binary_regression_report():
             lt = self.lift_table_dict['data_{}'.format(i)]
             plt.figure()
             ax = plt.subplot((111))
-            ax.plot(lt['Quantile Unit'], lt['Cumulative ADR'], "bo", label="Cum. Account DR", linestyle='solid')
+            ax.plot(lt['Quantile Unit'], lt['Cumulative ADR/TPR'], "bo", label="Cum. Account DR", linestyle='solid')
             ax.plot(lt['Quantile Value'], lt['Cumulative VDR'], "r^", label="Cum. Value DR", linestyle='dashed')
             ax.set_xlabel('Population Distribution')
             ax.set_ylabel('Cum. Detection Rate')
@@ -373,9 +373,9 @@ class binary_regression_report():
             lt = self.lift_table_dict['data_{}'.format(i)]
             plt.figure()
             ax = plt.subplot((111))
-            ax.plot(lt['Quantile Unit'], lt['FPR'], "bo", label="FPR", linestyle='solid')
+            ax.plot(lt['Quantile Unit'], lt['FP to TP ratio'], "bo", label="FP/TP", linestyle='solid')
             ax.set_xlabel('Population Distribution')
-            ax.set_ylabel('False Positive Rate')
+            ax.set_ylabel('FP to TP ratio')
             if xlim is not None:
                 ax.set_xlim(xlim)
             if ylim is not None:
@@ -398,9 +398,9 @@ class binary_regression_report():
             lt = self.lift_table_dict['data_{}'.format(i)]
             plt.figure()
             ax = plt.subplot((111))
-            ax.plot(lt['Quantile Unit'], lt['Cumulative FPR'], "bo", label="Cum. FPR", linestyle='solid')
+            ax.plot(lt['Quantile Unit'], lt['Cumulative FP to TP ratio'], "bo", label="Cum. FP/TP", linestyle='solid')
             ax.set_xlabel('Population Distribution')
-            ax.set_ylabel('Cum. False Positive Rate')
+            ax.set_ylabel('Cum. FP to TP ratio')
             if xlim is not None:
                 ax.set_xlim(xlim)
             if ylim is not None:
@@ -480,7 +480,7 @@ class binary_regression_report():
             plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='Random')
             plt.plot(model_recall, model_precision, marker='.', label='Model')
             # axis labels
-            plt.xlabel('Recall')
+            plt.xlabel('Recall/TPR')
             plt.ylabel('Precision')
             # show the legend
             plt.legend()
@@ -494,6 +494,8 @@ class binary_regression_report():
         self, 
         folder_name,
         n_bands, # Number of bands between 0 and 1
+        cost_fp = None, # Cost of blocking a legitimate customer
+        cost_fn = None, # Cost of missing a fraud/credit risk customer
         return_table=False # Set to True in order to return the table that produced the graph, otherwise set to False
         ):
      
@@ -510,9 +512,9 @@ class binary_regression_report():
                 weight_variable = table_name[self.weight_variable_name]
 
             threshold_array = np.linspace(0,1,n_bands+1, endpoint=False)
-#            column_names = ['cutoff', 'f1', 'accuracy', 'sensitivity/recall', 'specificity', 'precision']
+#            column_names = ['cutoff', 'f1', 'accuracy', 'TPR/recall', 'specificity', 'precision']
 #            df = pd.DataFrame(columns = column_names)
-            df_empty = pd.DataFrame(columns=['cutoff', 'f1', 'accuracy', 'sensitivity/recall', 'specificity', 'precision'], dtype='float64')
+            df_empty = pd.DataFrame(columns=['cutoff', 'f1', 'accuracy', 'TPR/recall', 'specificity', 'precision'], dtype='float64')
             dataframes = []
 
             for threshold in threshold_array: 
@@ -531,27 +533,63 @@ class binary_regression_report():
                 model_sensitivity = true_positive/positive
                 model_specificity = true_negative/negative
                 model_precision = true_positive/(true_positive+false_positive)
+                positive_rate = (false_positive+true_positive)/(positive+negative)
+                # Compute total cost for each threshold
+                if not cost_fp and not cost_fn:
+                    total_cost = 0
+                else: 
+                    total_cost = (cost_fp * false_positive) + (cost_fn * false_negative)
                 # Run different code depending on the Python version
 #                if sys.version_info[0] < 2:
-#                    df = df.append({'cutoff':threshold, 'f1':model_f1, 'accuracy':model_accuracy, 'sensitivity/recall':model_sensitivity, 'specificity':model_specificity, 'precision':model_precision}, ignore_index=True)
+#                    df = df.append({'cutoff':threshold, 'f1':model_f1, 'accuracy':model_accuracy, 'TPR/recall':model_sensitivity, 'specificity':model_specificity, 'precision':model_precision}, ignore_index=True)
 #                else: 
-#                    df = pd.concat([df, pd.DataFrame({'cutoff':[threshold], 'f1':[model_f1], 'accuracy':[model_accuracy], 'sensitivity/recall':[model_sensitivity], 'specificity':[model_specificity], 'precision':[model_precision]})], ignore_index=True)
-                df_new = pd.DataFrame({'cutoff':[threshold], 'f1':[model_f1], 'accuracy':[model_accuracy], 'sensitivity/recall':[model_sensitivity], 'specificity':[model_specificity], 'precision':[model_precision]})
+#                    df = pd.concat([df, pd.DataFrame({'cutoff':[threshold], 'f1':[model_f1], 'accuracy':[model_accuracy], 'TPR/recall':[model_sensitivity], 'specificity':[model_specificity], 'precision':[model_precision]})], ignore_index=True)
+                df_new = pd.DataFrame({'cutoff':[threshold], 'f1':[model_f1], 'accuracy':[model_accuracy], 'TPR/recall':[model_sensitivity], 'specificity':[model_specificity], 'precision':[model_precision], 
+                                        'positive_rate':[positive_rate], 'total_cost':[total_cost]})
                 dataframes.append(df_new)
 
             df = pd.concat([df_empty] + dataframes, ignore_index=True)
                 
             # create overplot
-            plt.plot(df['cutoff'], df['f1'], marker='.', label='F1 score')
-            plt.plot(df['cutoff'], df['accuracy'], linestyle='--', label='Accuracy')
-            plt.plot(df['cutoff'], df['sensitivity/recall'], marker='.', linestyle='--', label='Sensitivity/Recall')
-            plt.plot(df['cutoff'], df['specificity'], linestyle='dotted', label='Specificity')
-            plt.plot(df['cutoff'], df['precision'], marker='.', linestyle='dashdot', label='Precision')
+#            plt.plot(df['cutoff'], df['f1'], marker='.', label='F1 score')
+#            plt.plot(df['cutoff'], df['accuracy'], linestyle='--', label='Accuracy')
+#            plt.plot(df['cutoff'], df['TPR/recall'], marker='.', linestyle='--', label='TPR/Recall')
+#            plt.plot(df['cutoff'], df['specificity'], linestyle='dotted', label='Specificity')
+#            plt.plot(df['cutoff'], df['precision'], marker='.', linestyle='dashdot', label='Precision')
+#            plt.plot(df['cutoff'], df['positive_rate'], marker='.', linestyle='dashdot', label='Positive rate')
             # axis labels
-            plt.xlabel('Cutoff')
-            plt.ylabel('Metrics')
+#            plt.xlabel('Cutoff')
+#            plt.ylabel('Metrics')
             # show the legend
-            plt.legend()
+#            plt.legend()
+            # save the graph
+#            plt.savefig('{0}/output/{1}/metrics_{2}.png'.format(self.data_path, folder_name, i))
+            # show the plot
+#            plt.show()
+
+            # Create figure and first axis
+            fig, ax1 = plt.subplots()
+
+            # Plot on the LEFT axis (overplots)
+            ax1.plot(df['cutoff'], df['f1'], marker='.', label='F1 score')
+            ax1.plot(df['cutoff'], df['accuracy'], linestyle='--', label='Accuracy')
+            ax1.plot(df['cutoff'], df['TPR/recall'], marker='.', linestyle='--', label='TPR/Recall')
+            ax1.plot(df['cutoff'], df['specificity'], linestyle='dotted', label='Specificity')
+            ax1.plot(df['cutoff'], df['precision'], marker='.', linestyle='dashdot', label='Precision')
+            ax1.plot(df['cutoff'], df['positive_rate'], marker='.', linestyle='dashdot', label='Positive rate')
+            # axis labels
+            ax1.set_xlabel('Cutoff')
+            ax1.set_ylabel('Metrics')
+
+            # Create a SECOND y-axis (Right axis)
+            ax2 = ax1.twinx()  
+            ax2.plot(df['cutoff'], df['total_cost'], '-', label="Total cost")
+            ax2.set_ylabel("Total cost")
+            ax2.tick_params(axis='y')
+
+            # show the legend
+            ax1.legend()
+            ax2.legend()
             # save the graph
             plt.savefig('{0}/output/{1}/metrics_{2}.png'.format(self.data_path, folder_name, i))
             # show the plot
@@ -559,6 +597,10 @@ class binary_regression_report():
             
             if return_table == True:
                 display(df)
+                
+            df.to_csv('{0}/output/cutoff_{1}.csv'.format(self.data_path, i), index=False)
+        
+#        return df
                 
 #############################################################################################################################################
 #############################################################################################################################################
@@ -789,12 +831,17 @@ class clustering_report:
             X1_overlay = col_hist_mean.index.tolist()
             Y2_overlay = [np.average(self.input_data[var].dropna(), weights=self.input_data[~self.input_data[var].isnull()][self.weight_variable_name])]*len(self.input_data[self.cluster_variable_name].value_counts())
 
+            file_path = '{0}/output/graphs/{1}/{1}'.format(self.data_path, var)
+            # Limit to 259 characters if necessary, due to Windows file naming limitation
+            if len(file_path) > (259-11):
+                file_path = file_path[:(259-11)]
+
             plt.xlabel("Cluster labels")
             plt.ylabel(var)
             plt.bar(X1_overlay, Y1_overlay, color='maroon', width=0.4)
             plt.plot(X1_overlay, Y2_overlay, label='Overall average')
             plt.legend()
-            plt.savefig('{0}/output/graphs/{1}/{1}_mean.png'.format(self.data_path, var))
+            plt.savefig(file_path + '_mean.png')
             plt.show()
             
             # median graphs
@@ -808,7 +855,7 @@ class clustering_report:
             plt.bar(X1_overlay, Y1_overlay, color='blue', width=0.4)
             plt.plot(X1_overlay, Y2_overlay, label='Overall median')
             plt.legend()
-            plt.savefig('{0}/output/graphs/{1}/{1}_median.png'.format(self.data_path, var))
+            plt.savefig(file_path + '_median.png')
             plt.show()
             
             # Create summary statistics table
@@ -857,8 +904,13 @@ class clustering_report:
             t12 = t1.join(t2, rsuffix='_1').drop('labels_1', axis=1).rename(columns={'level_0': "Attribute"})
             t12['Attribute'] = var
             
+            file_path = '{0}/output/graphs/{1}'.format(self.data_path, var)
+            # Limit to 259 characters if necessary, due to Windows file naming limitation
+            if len(file_path) > (259-11):
+                file_path = file_path[:(259-11)]
+            
             plot = t12.plot(kind='bar', legend=True, xlabel=var, ylabel='Percentage')
-            plot.figure.savefig('{0}/output/graphs/{1}_cat_hist.png'.format(self.data_path, var))
+            plot.figure.savefig(file_path + '_cat_hist.png')
             
             for i in np.unique(self.input_data['cluster_labels']):
                 t12["{0}{1}".format(i, '_baseline_diff')] = (t12[i] - t12['Baseline']) / t12['Baseline']
