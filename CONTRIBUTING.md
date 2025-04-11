@@ -94,6 +94,6 @@ When reporting issues, please provide as much detail as possible, including:
 
 ## License
 
-By contributing to Supervised_Unsupervised_Solutions, you agree that your contributions will be licensed under the [LICENSE](LICENSE) file of this repository.
+By contributing to Supervised_Unsupervised_Solutions, you agree that your contributions will be licensed under the [LICENSE.md](LICENSE.md) file of this repository.
 
 Thank you for your contributions!
