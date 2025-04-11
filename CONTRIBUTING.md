@@ -1,6 +1,6 @@
-# Contributing to this repository (Supervised_Unsupervised_Solutions). 
+# Contributing to this repository (Python_Supervised_Unsupervised_Solutions). 
 
-I welcome contributions to Supervised_Unsupervised_Solutions! 
+I welcome contributions to Python_Supervised_Unsupervised_Solutions! 
 
 Please take a moment to review the following guidelines before submitting your contributions.
 
@@ -8,17 +8,17 @@ Please take a moment to review the following guidelines before submitting your c
 
 There are several ways you can contribute to this project:
 
-* **Reporting Bugs:** If you encounter a bug or unexpected behavior, please [open a new issue](https://github.com/sadamakis/Supervised_Unsupervised_Solutions/issues/new?assignees=&labels=bug&template=bug_report.md&title=Bug%20report%3A%20) describing the problem in detail. Include steps to reproduce the bug, your operating system, and any relevant error messages.
-* **Suggesting Enhancements:** If you have an idea for a new feature, improvement, or change, please [open a new issue](https://github.com/sadamakis/Supervised_Unsupervised_Solutions/issues/new?assignees=&labels=enhancement&template=feature_request.md&title=Feature%20request%3A%20) outlining your suggestion. Explain the problem it solves or the benefit it provides.
+* **Reporting Bugs:** If you encounter a bug or unexpected behavior, please [open a new issue](https://github.com/sadamakis/Python_Supervised_Unsupervised_Solutions/issues/new?assignees=&labels=bug&template=bug_report.md&title=Bug%20report%3A%20) describing the problem in detail. Include steps to reproduce the bug, your operating system, and any relevant error messages.
+* **Suggesting Enhancements:** If you have an idea for a new feature, improvement, or change, please [open a new issue](https://github.com/sadamakis/Python_Supervised_Unsupervised_Solutions/issues/new?assignees=&labels=enhancement&template=feature_request.md&title=Feature%20request%3A%20) outlining your suggestion. Explain the problem it solves or the benefit it provides.
 
 ## Pull Request Process
 
-1.  **Fork the Repository:** Fork the Supervised_Unsupervised_Solutions repository to your own GitHub account.
+1.  **Fork the Repository:** Fork the Python_Supervised_Unsupervised_Solutions repository to your own GitHub account.
 
 2.  **Clone Your Fork:** Clone your forked repository to your local machine:
     ```bash
-    git clone https://github.com/sadamakis/Supervised_Unsupervised_Solutions.git
-    cd Supervised_Unsupervised_Solutions
+    git clone https://github.com/sadamakis/Python_Supervised_Unsupervised_Solutions.git
+    cd Python_Supervised_Unsupervised_Solutions
     ```
 
 3.  **Create a Branch:** Create a new branch for your changes. Choose a descriptive name for your branch:
@@ -45,7 +45,7 @@ There are several ways you can contribute to this project:
     git push origin feature/your-new-feature
     ```
 
-8.  **Open a Pull Request:** Go to the original Supervised_Unsupervised_Solutions repository on GitHub and click the "Compare & pull request" button. Provide a clear and detailed description of your changes in the pull request. Reference any related issues.
+8.  **Open a Pull Request:** Go to the original Python_Supervised_Unsupervised_Solutions repository on GitHub and click the "Compare & pull request" button. Provide a clear and detailed description of your changes in the pull request. Reference any related issues.
 
 9.  **Code Review:** Your pull request will be reviewed by the developer. Be prepared to address any feedback and make necessary revisions.
 
@@ -86,7 +86,7 @@ Please follow these guidelines for your commit messages:
 When reporting issues, please provide as much detail as possible, including:
 
 * **Operating System and Version:**
-* **Supervised_Unsupervised_Solutions Version (if applicable):**
+* **Python_Supervised_Unsupervised_Solutions Version (if applicable):**
 * **Steps to Reproduce:**
 * **Expected Behavior:**
 * **Actual Behavior:**
@@ -94,6 +94,6 @@ When reporting issues, please provide as much detail as possible, including:
 
 ## License
 
-By contributing to Supervised_Unsupervised_Solutions, you agree that your contributions will be licensed under the [LICENSE.md](LICENSE.md) file of this repository.
+By contributing to Python_Supervised_Unsupervised_Solutions, you agree that your contributions will be licensed under the [LICENSE.md](LICENSE.md) file of this repository.
 
 Thank you for your contributions!
